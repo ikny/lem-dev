@@ -21,7 +21,7 @@ python-versions = ">=3.4"
 name = "mypy"
 version = "1.7.1"
 description = "Optional static typing for Python"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.8"
 
@@ -40,9 +40,17 @@ reports = ["lxml"]
 name = "mypy-extensions"
 version = "1.0.0"
 description = "Type system extensions for programs checked with the mypy type checker."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.5"
+
+[[package]]
+name = "numpy"
+version = "1.26.2"
+description = "Fundamental package for array computing in Python"
+category = "main"
+optional = false
+python-versions = ">=3.9"
 
 [[package]]
 name = "pycparser"
@@ -78,7 +86,7 @@ numpy = ["numpy"]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 
@@ -86,20 +94,21 @@ python-versions = ">=3.7"
 name = "typing-extensions"
 version = "4.8.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.8"
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "3064c0b531694d92d120901dec0a5113b070285cbb6d4f9f9e819ac0f386491f"
+content-hash = "89d04a1b068af85b987f9d0dfd88176b963572962ac6e2bf0c86e399c22d1253"
 
 [metadata.files]
 cffi = []
 ipynb = []
 mypy = []
 mypy-extensions = []
+numpy = []
 pycparser = []
 pygame = []
 sounddevice = []

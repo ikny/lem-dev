@@ -264,3 +264,8 @@ It seems it is the right one!
 
 ### Plan the architecture
 Planning in progress, but on a paper. Currently the question is between async and threading, as I need the audio loop to be really fast, so the sound is smooth, however, this is not the case with the GUI loop. To reduce CPU usage, I might use threading: one thread for sound, another one for GUI.
+
+28.11.
+I was battling with poetry and github and IT TOOK FUCKING FOREVER AAARGH
+
+but finally, it is done I hope.
