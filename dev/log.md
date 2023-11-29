@@ -265,7 +265,57 @@ It seems it is the right one!
 ### Plan the architecture
 Planning in progress, but on a paper. Currently the question is between async and threading, as I need the audio loop to be really fast, so the sound is smooth, however, this is not the case with the GUI loop. To reduce CPU usage, I might use threading: one thread for sound, another one for GUI.
 
-28.11.
+## 28.11.
 I was battling with poetry and github and IT TOOK FUCKING FOREVER AAARGH
 
 but finally, it is done I hope.
+
+### Metronome
+I sort of solved the core of the bpm mechanics: the metronome. I downloaded a free sample, cut the silence and came up with a formula for number of samples per beat, given sampling frequency and bpm. With this formula, I can add the accurate amount of zeros to the sample. Playing it in a loop then results in a metronome track.
+
+However, there is small inaccuracy. But since the inacuracy is in terms of one sample (if 44100 fps: 0,000022676 second inaccuracy per beat), I am going to ignore it.
+
+## 29.11.
+Experiment: simulate user input/GUI work with sleep(20ms) -> will the music go on smoothly?
+
+### wire_metronome
+Mixing is 'aight, but sth is wierd with the BPM. Set to 120 works like wonder, set it to 130 and you get
+```
+sum = metronome[current_frame%len(metronome):current_frame%len(metronome)+BLOCKSIZE] + indata
+
+ValueError: operands could not be broadcast together with shapes (3,2) (10,2)
+```
+Thirty seconds later: Apparently, it is len(metronome)%BLOCKSIZE. I thought this was okay because of the modulo mechanisms I created, but now I remember it only worked for multiples of blocksize. I am gonna try to set it to one, but that will most probably just trigger output underflow.
+
+Yes, it did. Therefore, it is time to come up with another formula for looping in tracks!
+
+### Looping formula
+One solution would certainly be to yield len(indata) from sample. The other one is indexing magic, which is what I am trying to accomplish now. And a peculiar thing!
+
+Given arr of len 10,
+```python
+print(arr[12])
+```
+throws index error. But
+```python
+print(arr[12:15])
+```
+returns just an empty list. Quite incoherent, isn't it?
+
+And that is not numpy, that is python!
+
+Okay, the easiest solution:
+```python
+frame=0
+for i in range(n):
+    start=frame%len(arr)
+    end=(frame+BLOCKSIZE)%len(arr)
+    print(start, end)
+    if end<start:
+        print(np.concatenate((arr[start:], arr[:end])))
+    else:
+        print(arr[start:end])
+    frame += BLOCKSIZE
+```
+
+If I end up using this for every track, there could be optimizations... a few perhaps in the way it is written (not duplicating len(arr) could reduce time IF creating new variable is not slower that accessing arr and computing its len). Another approach would be to pre-compute those and stack them in a queue. This would bring the problem of cancelling future events of deleted tracks.

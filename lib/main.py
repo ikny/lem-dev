@@ -6,7 +6,7 @@ class MixingPult():
     def __init__(self) -> None:
         self.tracks: list[np.ndarray] = [] # type: ignore
         self.settings: dict[str, Any] = {}
-        self.stream = sd.Stream()
+        self.stream = ...
 
 class Track():
     def __init__(self, name: str, content: np.ndarray) -> None: # type:ignore
