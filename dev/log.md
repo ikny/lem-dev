@@ -38,7 +38,7 @@ attempt to connect to server failed
 
 I'm gonna go to bed now.
 
-__EDIT 16.9.: I read on stack overflow that there is no need to solve this. So at least now, there is really no nedd to do so.__
+__EDIT 16.9.: I read on stack overflow that there is no need to solve this. So at least now, there is really no need to do so.__
 
 ## 16.9.
 Firstly, some knowledge I gained: when deciding about sampling frequency and bit depth, I'd decide for the basics: 44.1 kHz, 16 bit depth. I am still not sure in what format I would like to store my loops.
@@ -319,3 +319,218 @@ for i in range(n):
 ```
 
 If I end up using this for every track, there could be optimizations... a few perhaps in the way it is written (not duplicating len(arr) could reduce time IF creating new variable is not slower that accessing arr and computing its len). Another approach would be to pre-compute those and stack them in a queue. This would bring the problem of cancelling future events of deleted tracks.
+
+### Mixing tracks
+The problem of overflow or distortion when mixing int16 is imminent, thus I shall address it now.
+
+Overflow (when adding the tracks) is a no-go, so distortion (when dividing) is the way of jedi. First of all, **test whether it is significant**.
+
+Options if the distortion is significant:
+1. convert -> mix -> convert
+2. use different format?
+
+### Callback
+When studying callback function, I came to realize that I could use the param "frames" instead of the constant BLOCKSIZE. I have switched for now, but I do not know whether one of them is faster.
+
+### 04_record_loops
+It is ten PM, I am gonna stretch and go to sleep. The biggest experiment so far is almost done, with breakpoints setted where I see potential bug or as todos. Good night, lets continue tomorrow!
+
+## 30.11.
+### debugging 04_record_loops
+After first few buggs an actual error: output underflow, sadly. \
+\> enlarge BLOCKSIZE \
+\> that helped
+
+\> we have a lot of trouble concerning shapes and dtypes, definitely will use numpy in the clean version!
+- the trouble happens when the callback 
+\> it is necessary to come up with another way of keeping the stream alive, input() gets mixed with input_checker
+
+After one extensive round of debugging, I have moved to these problems:
+- metronome sound is extremely distorted (somewhere there is a conversion fault)
+- even after setting blocksize to 1000, I occasionally face output underflow.
+
+-> BLOCKSIZE = 10000 # for research purposes
+-> the mixing was wrong, as dividing by num_tracks forgets to count in the indata
+- apparently that was not the problem
+- the indata is ridiculously small, so when converting to int16, they become zeros.
+```python
+indata: 
+[[-0.00106812 -0.00106812]
+ [-0.00106812 -0.00112915]
+ [-0.00115967 -0.00112915]
+ ...
+ [-0.00048828 -0.00054932]
+ [-0.0005188  -0.00054932]
+ [-0.00057983 -0.00054932]]
+```
+
+In wire_metronome, the numbers are higher:
+```python
+indata: 
+[[173 174]
+ [173 175]
+ [162 163]
+ ...
+ [-82 -82]
+ [-68 -67]
+ [-44 -44]]
+metroslice 
+[[  0.     0.  ]
+ [  0.     0.  ]
+ [  0.     0.  ]
+ ...
+ [ 61.75 -11.25]
+ [ 52.5  -12.75]
+ [ 33.5  -19.75]]
+mixed 
+[[ 86.5    87.   ]
+ [ 86.5    87.5  ]
+ [ 81.     81.5  ]
+ ...
+ [-10.125 -46.625]
+ [ -7.75  -39.875]
+ [ -5.25  -31.875]]
+```
+
+the next step is to look more into these values and the conversions/typing. After that will be solved, it is time to experiment with blocksize and optimalizations without classes. If sufficient optimalization can be reached, try with classes. Then again, with GUI.
+
+## 2.12.
+### loudness
+Today! I will answer the fundamental question! How loud is too loud?!?
+
+Set up playground with the same code I have in wire_metronome and record_loops, try multiplying and see, where is the problem.
+
+Logically, it is the boundaries of int16, -32768 to 32767.
+
+Obviously, now it is necessary to compare those two codes and print the max values after every manipulation with the sample.
+
+### endless_sine
+One question was chasing me for two days now: how is it that the higher the generated frequency, the higher (louder) is the sample. What was I looking on was print(metronome), which prints just the **beginning** and ending of the sample. And OBVIOUSLY, the higer the frequency, the faster the numbers get high in the beginning.
+
+### Conversions
+Loudness in wire metronome:
+- metronome: 19001
+- indata: around 4000 was the highest
+
+Loudness in recored loops:
+- metronome is the same
+- indata strangely small (0.03)
+    - after experimenting with indata, they would never go above 0.9999...
+
+#### Conclusion
+**Metronome**: it is not the "loudness", but the distortion, which can be introduced in two places:
+- metronome_generator
+- mixer of the callback
+
+Since the former is easier to test, I will begin with it.
+
+**Indata**: indata are probably given as float. \
+Goal: determine why.
+
+## 4.12.
+In just half an hour I have got my endodoncy surgery, but it is time to code!
+
+### Indata
+Dtype of indata is actually float32
+
+## 5.12.
+### Indata
+Found this in my code...:
+```python
+try:
+        with sd.Stream(samplerate=SAMPLERATE, blocksize=BLOCKSIZE, dtype="float32",
+                       channels=2, callback=callback):
+```
+...quite self-explanatory.
+Fixed for now.
+
+### Distortion
+#### In metronome generator
+I do not have access to sound rn xd... One source of distortion I can think of is rounding the integers after division and then multiplying again. I am going to plot the metronome sample after every operation so I can observe the changes.
+
+That was fun. However, I could have deduced from
+1) both ```wire_metronome.py``` and ```record_loops.py``` contain metronome generator
+2) only ```record_loops.py``` contains mixer
+3) ```wire_metronome.py``` is not distorted
+4) ```record_loops.py``` is distorted
+
+that metronome_generator is not the faulty part of a program.
+
+I was not sure, as I slightly changed metronome_generator with the type annotations - but even considering solely the code, in metronome_generator there is no code which could distort the audio significantly.
+
+#### In mixer
+I found a few bugs, but before even fixing them, the audio is not distorted anymore! The thing was I was playing int16 metronome into float32 output!
+
+### More bugs (one more bug)
+After finishing recording of a track, myteriously the track changes shape from (BLOCKSIZE, CHANNELS) to (BLOCKSIZE,). That means that the track array has len BLOCKSIZE in one dimension, but has no other dimension, like the following one: 
+```python
+[0, 1, 2, ..., BLOCKSIZE]
+```
+
+instead, it should look like this:
+```python
+[[0, 1, 2, ..., BLOCKSIZE],
+ [0, 1, 2, ..., BLOCKSIZE]]
+```
+
+There are two places I am getting error on:
+1. ```data += trackslice``` in callback
+    - ValueError: operands could not be broadcast together with shapes (10000,2) (10000,) (10000,2)
+2. ```recorded_track = np.concatenate([recorded_track, zeros])``` in post_production
+    - recorded track has shape (10000,), whereas zeros have shape (10000, 2)
+
+Couldn't it be dependant on BPM? Lets try:
+
+**BPM -> error number (1 or 2 as mentioned above)**\
+120 -> 2\
+127 -> 2\
+130 -> 2\
+140 -> 1\
+135 -> 1\
+132 -> 2\
+133 -> 1 => BPM>133: Err 1\
+60 -> 1\
+90 -> 1\
+105 -> 2\
+100 -> 2\
+95 -> 2\
+93 -> 1\
+94 -> 2 => BPM<94: Err 1
+
+If BPM is between 94-133, it passes through callback and gets caught in post_production.
+
+Why? I do not have a single idea. But that is probably not necessary for solving the problem, so I will be focusing on that for now.
+
+**Oh, the previous research is not true! I just got the first error with 120 BPM!**
+
+Perhaps it is more about the timing of ending the recording.
+
+#### The actual bug
+This is interesting:
+
+shape of recorded track before anything was added: ```(0, 2)```\
+shape of indata, which we add: ```(10000, 2)```\
+shape of recorded track after first appending: ```(20000,)```
+
+lets closely examine the part of code!
+
+Okay, isolated it in a playground, that is the problem!!
+> Ladies and gentleman, we've got him!
+
+#### Recap
+It seems like I haven't understood and tested numpy.append properly, which caused a bug in the development.
+
+Ah, yes, definitely:
+>axis : int, optional\
+>    The axis along which values are appended. If axis is not given, both arr and values are flattened before use.
+
+## 6.12.
+### Shape bug solution
+Turns out I can do this thing in two ways:
+1. ```recorded_track = np.append(arr=recorded_track, values=indata, axis=0)```
+    - this requires the one extra argument ```axis```
+    - furthermore, it calls the second solution inside
+2. ```recorded_track = np.concatenate([recorded_track, indata])```
+
+### Further action
+My code is now *oficially* debugged, but it is not robust - I can break the program in a few ways, e.g. recording too short loop results in division by zero in modulo. The question is, will I make it more robust now, or shall I do it with the transition to classes?
