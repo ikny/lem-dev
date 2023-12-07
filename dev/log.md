@@ -534,3 +534,29 @@ Turns out I can do this thing in two ways:
 
 ### Further action
 My code is now *oficially* debugged, but it is not robust - I can break the program in a few ways, e.g. recording too short loop results in division by zero in modulo. The question is, will I make it more robust now, or shall I do it with the transition to classes?
+
+### Issues
+1. add error handling for:
+    - under/overrun
+    - recorded track len 0
+2. Two options\
+    a) try to optimalize the code so it is able to run smoothly without the GUI\
+    b) create the GUI so the "first version" is complete
+
+#update: it is most certainly the optimalisation!
+The coolest way to do it would be to time all the pieces of code now and then see the results on my way.
+
+Some current values:
+BLOCKSIZE = 10000, BPM = 70 => max loops before underrun = 3\
+BLOCKSIZE = 5000, BPM = 70 => max loops before underrun = 4\
+BLOCKSIZE = 1000, BPM = 70 => program crashed after while (just metronome)
+
+```
+ALSA lib pcm.c:8568:(snd_pcm_recover) underrun occurred
+Expression 'err' failed in 'src/hostapi/alsa/pa_linux_alsa.c', line: 3355
+Expression 'ContinuePoll( self, StreamDirection_In, &pollTimeout, &pollCapture )' failed in 'src/hostapi/alsa/pa_linux_alsa.c', line: 3907
+Expression 'PaAlsaStream_WaitForFrames( stream, &framesAvail, &xrun )' failed in 'src/hostapi/alsa/pa_linux_alsa.c', line: 4285
+```
+
+## 7.12.
+### Timing the code for optimalisation using ```timeit``` module.

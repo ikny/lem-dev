@@ -13,7 +13,7 @@ before trying to do it with class abstraction.
 """
 
 SAMPLERATE = 44100  # [samples per second]
-BLOCKSIZE = 10000  # [samples]
+BLOCKSIZE = 1000  # [samples]
 DTYPE = np.int16
 STR_DTYPE = "int16"
 CHANNELS = 2
@@ -117,7 +117,7 @@ def main() -> None:
         num_tracks = len(tracks)
         data = (indata/(num_tracks + 1)).astype(dtype=DTYPE)
 
-        for i, track in enumerate(tracks):
+        for track in tracks:
             # slice
             start = current_frame % len(track)
             end = (current_frame+frames) % len(track)
