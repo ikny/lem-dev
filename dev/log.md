@@ -560,3 +560,28 @@ Expression 'PaAlsaStream_WaitForFrames( stream, &framesAvail, &xrun )' failed in
 
 ## 7.12.
 ### Timing the code for optimalisation using ```timeit``` module.
+The file ```timing_record_loops.ipynb``` contains the according documentation.
+
+## 8.12.
+Continuing optimalisation.
+
+## 10.12.
+I am gonna start to work on the GUI now, as Kryl thinks it is wiser.
+
+#fl
+### sleeping pygame
+> pygame.time.wait()
+>
+>    pause the program for an amount of time
+>    wait(milliseconds) -> time
+>
+>    Will pause for a given number of milliseconds. This function sleeps the process to share the processor with other programs. A program that waits for even a few milliseconds will consume very little processor time. It is slightly less accurate than the pygame.time.delay() function.
+>
+>    This returns the actual number of milliseconds used.
+
+## 13.12.
+Figured out that pygame does not have a GUI support, so I would have to program all the GUI by myself... which sounds exciting, but not as exciting as optimalization. I would definitely take my OOP skills to tthe next level, but it would also consume a lot of time.
+
+There is a great alternative, a package called ```pygame_gui```. It seems to be the right one for this job, is recently created and moreover seems well-documented. 
+
+## 14.12.

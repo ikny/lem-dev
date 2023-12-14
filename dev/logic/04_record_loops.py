@@ -46,6 +46,7 @@ def metronome_generator(bpm: int, path: str) -> npt.NDArray[DTYPE]:
     else:
         sample = sample[:desired_len]
 
+    # adjust volume
     sample = (sample/4).astype(dtype=DTYPE)
 
     return sample
