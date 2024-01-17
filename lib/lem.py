@@ -26,6 +26,8 @@ class Lem():
 
         self.stream_thread: threading.Thread
         self.tracks: list[npt.NDArray[DTYPE]] = []
+        self.tracks_readable = True
+        self.tracks_backup: list[npt.NDArray[DTYPE]] = []
         self.recorded_track: npt.NDArray[DTYPE] = np.empty(
             shape=(0, CHANNELS), dtype=DTYPE)
         self.current_frame = 0
@@ -58,6 +60,15 @@ class Lem():
 
         return sample
 
+    def start_stream(self) -> None:
+        """ Make a new thread, in which the stream will be active """
+        self.stream_thread = threading.Thread(target=self.main)
+        self.stream_thread.start()
+        # the thread will end
+
+    def terminate(self) -> None:
+        self.stream_thread.join()
+
     def post_production(self) -> None:
         """ cut/fill newly recorded track to bpm, add to tracks and clear recorded_track  """
         remainder = len(self.recorded_track) % self.len_beat
@@ -68,19 +79,18 @@ class Lem():
             recorded_track = np.concatenate([self.recorded_track, zeros])
         elif remainder <= self.len_beat/2:
             recorded_track = self.recorded_track[:len(
-                recorded_track)-remainder]
+                self.recorded_track)-remainder]
 
         self.tracks.append(recorded_track)
         self.recorded_track = np.empty(shape=(0, CHANNELS), dtype=DTYPE)
 
-    def start_stream(self) -> None:
-        """ Make a new thread, in which the stream will be active """
-        self.stream_thread = threading.Thread(target=self.main)
-        self.stream_thread.start()
-        # the thread will end 
-
-    def terminate(self) -> None:
-        self.stream_thread.join()    
+    def delete_track(self, idx: int) -> None:
+        self.tracks_backup = self.tracks.copy()
+        # 1. this is probably not safe at all
+        self.tracks_readable = False
+        # 2. this only works for I am storing the tracks in a list
+        self.tracks.pop(idx+1)  # +1 because of the metronome track
+        self.tracks_readable = True
 
     def main(self) -> None:
         """ processes the audio """
@@ -99,7 +109,9 @@ class Lem():
             num_tracks = len(self.tracks)
             data = (indata/(num_tracks + 1)).astype(dtype=DTYPE)
 
-            for track in self.tracks:
+            tracks = self.tracks if self.tracks_readable else self.tracks_backup
+
+            for track in tracks:
                 # slice
                 start = self.current_frame % len(track)
                 end = (self.current_frame+frames) % len(track)

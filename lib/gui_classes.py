@@ -90,6 +90,7 @@ class RecordButton(tk.Button):
 class TrackList(tk.Frame):
     def __init__(self, master: LemApp, **kwargs: Any) -> None:
         super().__init__(master, **kwargs)
+        self.master: LemApp = master
         self._tracks: dict[int, Track] = {}
         self._free_id = 0
 
@@ -121,6 +122,11 @@ class TrackList(tk.Frame):
             0, 0, 0, self.track_frame.winfo_height()))
 
     def delete_track(self, track_id: int) -> None:
+        keys = self._tracks.keys()
+        idxs = list(keys)
+        idx = idxs.index(track_id)
+        self.master.lem_state.delete_track(idx=idx)
+
         self._tracks.pop(track_id)
         self._update_sizes()
 

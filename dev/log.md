@@ -634,3 +634,17 @@ the err above is strange... oh, idea! It could be that the metronome sample is s
 Now it works, but:
 1) I cannot delete tracks
 2) it is very unsafe (rn alsa: underrun occured error happened, and the whole stream terminated mid-sesh)
+
+### ??? I store tracks as list[NDarray]
+-> that is perhaps why it is so slow
+
+Okay, now i can delete tracks.
+
+- tracks should fill the canvas horizontally
+(- add metronome button (+ metronome flag in the callback))
+- write comments for all the code
+- write the logic
+    - add error handling
+    - ~~solve the threading challenges~~
+    - ~~implement deletion of tracks~~
+- encapsulate those properties that should be

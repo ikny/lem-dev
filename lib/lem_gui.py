@@ -30,6 +30,11 @@ class LemApp(tk.Tk):
         self.record_button["state"] = "normal"
         self.app_bar.dialog_button.destroy()
 
+    def destroy(self) -> None:
+        self.lem_state.stream_active = False
+        self.lem_state.terminate()
+        return super().destroy()
+
 
 if __name__ == "__main__":
     app = LemApp()
