@@ -585,3 +585,52 @@ Figured out that pygame does not have a GUI support, so I would have to program 
 There is a great alternative, a package called ```pygame_gui```. It seems to be the right one for this job, is recently created and moreover seems well-documented. 
 
 ## 14.12.
+Switched to tkinter
+
+## 15.12.
+I am trying to work my way through creating the interface in tkinter. Plan:
+- think it through on a paper (gui x state)
+- experiment with the themes that come with the ```ttk``` package
+
+## 11.1
+Today I have done a vast amount of work on the GUI. I have not commented nearly anything, so it is going to be real fun, unless I do it tomorrow or saturday.
+Things that are still wrong on the end of the day:
+- track trash icon is not loading
+- track delete button is not clickable
+- tracks do not fill the whole available space vertically 
+- canvas starts small y-wise
+
+## 12.1.
+- canvas starts small y-wise
+- track shlould have a border
+
+## 16.1.
+- ~~canvas starts small y-wise~~
+- tracks should fill the canvas horizontally
+- ~~add bpm entry validation~~
+    - ~~should be a whole number between 1 and 400~~
+(- add metronome button (+ metronome flag in the callback))
+- write comments for all the code
+- write the logic
+    - solve the threading challenges
+    - implement deletion of tracks
+- encapsulate those properties that should be
+
+### First test run
+Thread with endless loop works, but does not stop after closing tkinter
+- -> add terminate function to Lem, which will end the thread (maybe just set ```stream_active=false```?)
+
+### test run 2
+with the proper main func, I immediatelly got this err:
+```
+    data += track_slice
+ValueError: operands could not be broadcast together with shapes (100000,2) (11800,2) (100000,2)
+```
+
+## 17.1.
+the err above is strange... oh, idea! It could be that the metronome sample is shorter than the blocksize. I did not program this case, as I did not suppose such big blocksize is realistic.. :/
+-> It is so!
+
+Now it works, but:
+1) I cannot delete tracks
+2) it is very unsafe (rn alsa: underrun occured error happened, and the whole stream terminated mid-sesh)
