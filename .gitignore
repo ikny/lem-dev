@@ -1,0 +1,4 @@
+.venv
+dev/playground.py
+dev/playground.ipynb
+**/__pycache__/
