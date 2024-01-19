@@ -67,7 +67,15 @@ class Lem():
         # the thread will end
 
     def terminate(self) -> None:
+        self.stream_active = False
         self.stream_thread.join()
+
+    def start_recording(self) -> None:
+        self.recording = True
+
+    def stop_recording(self) -> None:
+        self.recording = False
+        self.post_production()
 
     def post_production(self) -> None:
         """ cut/fill newly recorded track to bpm, add to tracks and clear recorded_track  """

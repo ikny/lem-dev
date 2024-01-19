@@ -650,21 +650,41 @@ Okay, now i can delete tracks.
 - encapsulate those properties that should be
 
 ## 18.1.
-K, TODO after the consultation:
+K, general TODO after the consultation:
 1) comment all the code using sphinx format
 2) encapsulate everything that should be
 3) extract the main function from Lem into a separate class
 4) ensure error safety with alsa
-5) do some testing on other computers, so it will not break when my opponent tries to run it.
-6) get the sources Kryl gave me and find some useful information in them
-7) generate dev documentation in the sphynx format
-8) make user documentation with screenshots etc
+5) bind the tk buttons to keyboard input
+6) do some testing on other computers, so it will not break when my opponent tries to run it.
+7) get the sources Kryl gave me and find some useful information in them
+8) generate dev documentation
+9) make user documentation with screenshots etc
 
 then, if I want to experiment:
-- make improvements to the gui
+- add features
     - wrong bpm input indication (red the text)
     - add metronome switch button
     - add volume control for metronome/tracks
+    - add pause project option
 - try to improve the performance
     - try some timing using ```timeit```
     - explore the possibility of rewriting the code in ```codon```
+
+Errs list:
+- prevent modulo by zero error in callback by asserting no track length is 0
+
+Questions:
+- should I decouple the classes using callback pattern?
+
+### Decoupling the classes using callbacks
+After some discussion with Github Copilot and Zbyněk, I have decided to:
+1) Create ```start_recording``` and ```stop_recording``` functions in ```Lem```. This enables me to use less references to ```Lem``` from the other classes (e.g.: I can call ```post_production``` in the ```stop_recording``` function instead of in ```RecordButton```).
+2) Pass those functions as callbacks to the ```RecordButton``` widget.
+
+Additionally, I have two cases in which I am not sure what would the cleanest solution look like:
+1) ```BpmPopup``` needs to modify data in ```LemApp``` and in ```Lem```.
+2) ```Track```'s delete button needs to modify data in ```Tracklist``` and in ```Lem```.
+
+Should the ```BpmPopup``` call the according method in ```LemApp```, which would call the according method in ```Lem```? Or should it get both the methods as callbacks?
+
