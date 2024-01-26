@@ -6,30 +6,46 @@ from main import LemApp
 
 
 class BpmPopup(tk.Toplevel):
+    """A GUI class representing a dialog window. The dialog asks for BPM value and checks its validity. If valid, sets BPM.
+    """
+
     def __init__(self, master: LemApp, **kwargs: Any) -> None:
+        """Build a new BpmPopup.
+
+        Args:
+            master (LemApp): The parent widget. Must be an instance of Lem class (the top level gui class of this project).
+        """
         super().__init__(master, **kwargs)
         self.master: LemApp = master
 
         self.title("enter BPM")
 
-        self.entry_line = tk.Frame(master=self)
-        self.message = tk.Label(
-            master=self.entry_line, text="Insert the desired BPM value: ")
-        self.message.pack(side="left")
-        self.bpm_entry = tk.Entry(master=self.entry_line, width=3)
+        self._entry_line = tk.Frame(master=self)
+        self._message = tk.Label(
+            master=self._entry_line, text="Insert the desired BPM value: ")
+        self._bpm_entry = tk.Entry(master=self._entry_line, width=3)
 
-        self.bpm_entry.pack(side="right")
-        self.entry_line.pack(side="top", padx=30, pady=5)
+        self._message.pack(side="left")
+        self._bpm_entry.pack(side="right")
+        self._entry_line.pack(side="top", padx=30, pady=5)
 
-        self.instructions = tk.Label(
+        self._instructions = tk.Label(
             master=self, text="BPM value must be a whole number between 1 and 400")
-        self.instructions.pack()
+        self._instructions.pack()
 
-        self.confirm = tk.Button(
+        self._confirm = tk.Button(
             master=self, text="Confirm!", command=self.set_bpm)
-        self.confirm.pack(side="bottom", padx=5, pady=5)
+        self._confirm.pack(side="bottom", padx=5, pady=5)
 
     def validate(self, value: str) -> bool:
+        """A method evaluating whether the value meets the conditions for suitable BPM (an integer between 1 and 400)
+
+        Args:
+            value (str): value taken from an entry
+
+        Returns:
+            bool: True if value meets the conditions, else False.
+        """
         try:
             val = int(value)
         except ValueError:
@@ -38,40 +54,60 @@ class BpmPopup(tk.Toplevel):
         return val > 0 and val <= 400
 
     def set_bpm(self) -> None:
-        entry_value = self.bpm_entry.get()
+        """Try whether the entry value is a suitable BPM value. If yes, set it as a BPM.
+        """
+        entry_value = self._bpm_entry.get()
         if not self.validate(value=entry_value):
             return
-        # get entry val, close this popup
         bpm = int(entry_value)
         self.master.set_bpm(bpm=bpm)
         self.destroy()
 
 
 class AppBar(tk.Frame):
+    """A GUI class representing an app bar (the topmost widget on the page). 
+    Contains label displaying the set BPM, and initially also a button enabling to set it. 
+    This button is destroyed afterwards.
+    """
+
     def __init__(self, state: Lem, master: LemApp, **kwargs: Any) -> None:
+        """Build a new AppBar.
+
+        Args:
+            state (Lem): The main state class, managing all the logic.
+            master (LemApp): The parent widget. Must be an instance of Lem class (the top level gui class of this project).
+        """
         super().__init__(master, **kwargs)
         self.master: LemApp = master
 
         self._bpm_lbl = tk.Label(master=self, text="BPM: ")
         self._bpm_lbl.pack(side="left", padx=5, pady=5)
 
-        self.dialog_button = tk.Button(
+        self._dialog_button = tk.Button(
             master=self, text="set BPM", command=self.invoke_dialog)
-        self.dialog_button.pack(side="right", padx=5, pady=5)
+        self._dialog_button.pack(side="right", padx=5, pady=5)
 
     def update_bpm(self, bpm: int) -> None:
+        """Update the BPM label and destroy the dialog button.
+
+        Args:
+            bpm (int): The BPM value.
+        """
         self._bpm_lbl.config(text=f"BPM: {bpm}")
+        self._dialog_button.destroy()
 
     def invoke_dialog(self) -> None:
+        """Open a popup dialog.
+        """
         BpmPopup(master=self.master)
 
 
 class RecordButton(tk.Button):
-    """ A GUI class representing a two-state button through which users can start or stop recording of tracks.
+    """A GUI class representing a two-state button through which users can start or stop recording of tracks.
     """
 
     def __init__(self, master: tk.Misc, start_recording: Callable[[], None], stop_recording: Callable[[], None], **kwargs: Any) -> None:
-        """Initialize a new RecordButton instance.
+        """Build a new RecordButton.
 
         Args:
             master (tk.Misc): The parent widget.
@@ -85,7 +121,7 @@ class RecordButton(tk.Button):
         self._state = "waiting"
 
     def _clicked(self) -> None:
-        """A function to be called when the button is pushed. 
+        """A method to be called when the button is pushed. 
         Based on the current state decides what callback should be called and changes its state.
         """
         if self._state == "waiting":
@@ -99,11 +135,11 @@ class RecordButton(tk.Button):
 
 
 class TrackList(tk.Frame):
-    """ A GUI class representing a scrollable list of recorded tracks.
+    """A GUI class representing a scrollable list of recorded tracks.
     """
 
     def __init__(self, master: LemApp, **kwargs: Any) -> None:
-        """Initialize a new Tracklist instance.
+        """Build a new Tracklist.
 
         Args:
             master (LemApp): The parent widget. Must be an instance of Lem class (the top level gui class of this project).
@@ -151,6 +187,7 @@ class TrackList(tk.Frame):
         keys = self._tracks.keys()
         track_indexes = list(keys)
         track_index = track_indexes.index(track_id)
+        # Q: this is pretty tightly coupled, idk what solution would be cleaner.
         self.master.lem_state.delete_track(idx=track_index)
 
         self._tracks.pop(track_id)
@@ -165,12 +202,12 @@ class TrackList(tk.Frame):
 
 
 class Track(tk.Frame):
-    """ A GUI class to represent a recorded track.
+    """A GUI class to represent a recorded track.
     Includes a label with the track ID, so the user can identify the track, and a delete button.
     """
 
     def __init__(self, id: int, master: tk.Frame, tracklist: TrackList, **kwargs: Any) -> None:
-        """Initialize a new instance of Track.
+        """Build a new Track.
 
         Args:
             id (int): The unique ID of the track.

@@ -68,7 +68,10 @@ class Lem():
 
     def terminate(self) -> None:
         self.stream_active = False
-        self.stream_thread.join()
+        try:
+            self.stream_thread.join()
+        except AttributeError:
+            return
 
     def start_recording(self) -> None:
         self.recording = True
@@ -94,7 +97,7 @@ class Lem():
 
     def delete_track(self, idx: int) -> None:
         self.tracks_backup = self.tracks.copy()
-        # 1. this is probably not safe at all
+        # 1. this is probably not safe at all, should replace it with a lock
         self.tracks_readable = False
         # 2. this only works for I am storing the tracks in a list
         self.tracks.pop(idx+1)  # +1 because of the metronome track

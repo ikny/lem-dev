@@ -48,7 +48,6 @@ class LemApp(tk.Tk):
 
         self.app_bar.update_bpm(bpm=bpm)
         self.record_button["state"] = "normal"
-        self.app_bar.dialog_button.destroy()
 
     def stop_recording(self) -> None:
         """A method to be passed as a callback to the RecordButton.
