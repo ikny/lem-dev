@@ -187,7 +187,7 @@ class TrackList(tk.Frame):
         keys = self._tracks.keys()
         track_indexes = list(keys)
         track_index = track_indexes.index(track_id)
-        # Q: this is pretty tightly coupled, idk what solution would be cleaner.
+        # TODO: this is pretty tightly coupled, idk what solution would be cleaner.
         self.master.lem_state.delete_track(idx=track_index)
 
         self._tracks.pop(track_id)

@@ -44,7 +44,7 @@ class LemApp(tk.Tk):
         Args:
             bpm (int): The value the user has entered into BpmPopup.
         """
-        self.lem_state.set_bpm(bpm=bpm)
+        self.lem_state.initialize_stream(bpm=bpm)
 
         self.app_bar.update_bpm(bpm=bpm)
         self.record_button["state"] = "normal"

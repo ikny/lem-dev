@@ -32,9 +32,9 @@ class Lem():
 
         self._tracks: list[npt.NDArray[DTYPE]] = []
 
-        self._metronome_volume = 1/8
+        self._metronome_volume = 1/4
 
-    def initialize_stream(self, bpm: int) -> None:
+    def initialize_metronome(self, bpm: int) -> None:
         """Prepare the metronome, so the user can start to record tracks, and start a stream.
 
         Args:
@@ -47,11 +47,6 @@ class Lem():
         self._update_tracks()
 
         self._stream_manager.start_stream()
-
-    def terminate(self) -> None:
-        """Delegate the closing of the stream to stream manager.
-        """
-        self._stream_manager.end_stream()
 
     def metronome_generator(self, bpm: int, path: str) -> npt.NDArray[DTYPE]:
         """Cut or fill the metronome sample so that it is long exactly one beat of the given BPM.
@@ -120,7 +115,7 @@ class Lem():
         Args:
             idx (int): The index of the track which is being deleted.
         """
-        self._tracks.pop(idx+1) # +1 because of the metronome track
+        self._tracks.pop(idx)
         self._update_tracks()
 
     def _update_tracks(self) -> None:
@@ -148,7 +143,7 @@ class LoopStreamManager():
 
         self._stream_thread: threading.Thread
         # the audio data to be played
-        self._tracks: list[npt.NDArray[DTYPE]] = []
+        self._tracks: list[npt.NDArray[DTYPE]]
         # the synchronized backup of _tracks which is used as a data source when the _tracks are being updated
         self._tracks_copy: list[npt.NDArray[DTYPE]]
         self._tracks_lock: threading.Lock = threading.Lock()
@@ -230,11 +225,10 @@ class LoopStreamManager():
                 self._recorded_track = np.concatenate(
                     [self._recorded_track, indata])
 
-            # TODO: implement a "numpy circular buffer"? - ease up slicing, but not at cost of speed... 
-            # also bonus points for IT datastructure lol
-            sliced_data = [indata]
-            # slice
+            # TODO: implement a "numpy circular buffer"? - ease up slicing, but not at cost of speed
+            sliced_data = []
             for track in tracks:
+                # slice
                 start = self._current_frame % len(track)
                 end = (self._current_frame+frames) % len(track)
                 if end < start:

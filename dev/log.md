@@ -688,3 +688,77 @@ Additionally, I have two cases in which I am not sure what would the cleanest so
 
 Should the ```BpmPopup``` call the according method in ```LemApp```, which would call the according method in ```Lem```? Or should it get both the methods as callbacks?
 
+## 31.1.
+Finished splitting the logic into two classes, loop stream manager and looper emulator. Time to check up how I am doing:
+
+K, general TODO after the consultation:
+1) ~~comment all the code using sphinx format~~
+2) ~~encapsulate everything that should be~~
+3) ~~extract the main function from Lem into a separate class~~
+4) ensure error safety with alsa
+5) bind the tk buttons to keyboard input
+6) do some testing on other computers, so it will not break when my opponent tries to run it.
+7) get the sources Kryl gave me and find some useful information in them
+8) generate dev documentation
+9) make user documentation with screenshots etc
+
+then, if I want to experiment:
+- add features
+    - wrong bpm input indication (red the text)
+    - add metronome switch button
+    - add volume control for metronome/tracks
+    - add pause project option
+- try to improve the performance
+    - ~~try some timing using ```timeit```~~
+    - explore the possibility of rewriting the code in ```codon```
+
+Errs list:
+- ~~prevent modulo by zero error in callback by asserting no track length is 0~~
+
+Questions:
+- ~~should I decouple the classes using callback pattern?~~
+- remaining questions are marked together with todos by `# TODO:`
+
+### Next plans
+Okay, not bad. Time to update the tasks on the todo.
+
+1) complete the callback in stream manager using numpy methods
+2) test the functionality after the update
+3) ensure error safety with alsa
+4) bind the tk buttons to keyboard input
+5) complete the remaining todos
+6) do some testing on other computers, so it will not break when my opponent tries to run it.
+7) get the sources Kryl gave me and find some useful information in them
+
+**After the code is completed:**
+1) generate dev documentation
+2) make user documentation with screenshots etc
+3) write the thesis
+
+If I want to experiment:
+- add features
+    - wrong bpm input indication (red the text)
+    - add metronome switch button
+    - add volume control for metronome/tracks
+    - add pause project option
+- try to improve the performance
+    - try some timing using ```timeit```
+        - time thoroughly the whole callback/main
+    - try rewriting the code with the use of multiprocessing
+    - explore the possibility of rewriting the code in ```codon```
+
+### Bitter reality
+I have figured out I cannot speed up the code as I thought, because the tracks have different length, so the have to be in a list.
+
+Also, the results of the first tests:
+- deleting tracks and terminating the app does not work, as somehow the lock is not given back
+- the metronome is very loud in comparison to the indata
+- I have ommited the indata from mixing
+
+2nd test:
+- metronome is still too loud
+- the lock works now wtf
+
+And everything fails on **EIGHT** tracks, not three like before!! seems like numpy is doing its thing.
+
+> Done for today, yay!
