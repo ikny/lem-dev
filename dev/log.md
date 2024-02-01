@@ -762,3 +762,7 @@ Also, the results of the first tests:
 And everything fails on **EIGHT** tracks, not three like before!! seems like numpy is doing its thing.
 
 > Done for today, yay!
+
+
+## 1.2.
+Trying to get into the error handling, but it seems there is no way I can just ignore the alsa error :C. The easy solution is now to set the blocksize, sampling frequency and datatypes etc. so that the system is robust enough. Maybe also a cap on the number of tracks would be great.

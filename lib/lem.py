@@ -115,12 +115,12 @@ class Lem():
             self._update_tracks()
 
     def delete_track(self, idx: int) -> None:
-        """Removes the track with index idx.
+        """Removes the track with on index idx+1, because the first track is the metronome sample.
 
         Args:
             idx (int): The index of the track which is being deleted.
         """
-        self._tracks.pop(idx+1) # +1 because of the metronome track
+        self._tracks.pop(idx+1)
         self._update_tracks()
 
     def _update_tracks(self) -> None:
@@ -230,7 +230,7 @@ class LoopStreamManager():
                 self._recorded_track = np.concatenate(
                     [self._recorded_track, indata])
 
-            # TODO: implement a "numpy circular buffer"? - ease up slicing, but not at cost of speed... 
+            # TODO: implement a "numpy circular buffer"? - ease up slicing, but not at cost of speed...
             # also bonus points for IT datastructure lol
             sliced_data = [indata]
             # slice
