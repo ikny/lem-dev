@@ -1,6 +1,8 @@
-from typing import Any
+from time import sleep
+from typing import Any, TextIO
 import numpy.typing as npt
 import logging
+import sys
 
 import sounddevice as sd
 import numpy as np
@@ -9,7 +11,8 @@ import threading
 
 
 SAMPLERATE = 44100  # [samples per second]
-BLOCKSIZE = 10000   # [samples]
+# TODO: is setting blocksize to zero OK for the UX?
+BLOCKSIZE = 10   # [samples]
 CHANNELS = 2
 LATENCY = 0
 
@@ -18,7 +21,7 @@ STR_DTYPE = "int16"
 
 METRONOME_SAMPLE_PATH = "lib/samples/metronome.wav"
 
-
+# TODO: if the logger is not used in the final code, delete it
 logger = logging.getLogger(name=__name__)
 logging.basicConfig(
     format="%(asctime)s %(name)s %(message)s", level=logging.DEBUG)
@@ -99,7 +102,7 @@ class Lem():
 
         Returns:
             bool: Passes the value returned by the post_production method
-        """        
+        """
         recorded_track = self._stream_manager.stop_recording()
         return self.post_production(recorded_track=recorded_track)
 
@@ -247,6 +250,7 @@ class LoopStreamManager():
 
             # TODO: implement a "numpy circular buffer"? - ease up slicing, but not at cost of speed...
             # also bonus points for IT datastructure lol
+
             sliced_data = [indata]
             # slice
             for track in tracks:
@@ -267,7 +271,8 @@ class LoopStreamManager():
             self._current_frame += frames
 
         with sd.Stream(samplerate=SAMPLERATE, blocksize=BLOCKSIZE, dtype=STR_DTYPE,
-                       channels=CHANNELS, callback=callback):
-            # TODO: is there another way how to keep the stream alive?
+                       channels=CHANNELS, callback=callback) as stream:
             while self._stream_active:
-                pass
+                sleep(1)
+
+        # TODO: handle exceptions (nest with block into try-except block)

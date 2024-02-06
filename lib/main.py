@@ -30,13 +30,14 @@ class LemApp(tk.Tk):
         self.app_bar = AppBar(state=self.lem_state, master=self)
         self.app_bar.pack()
         self.record_button = RecordButton(
-            master=self, state="disabled", start_recording=self.lem_state.start_recording, stop_recording=self.stop_recording)
+            master=self, state="disabled", on_start_recording=self.on_start_recording, on_stop_recording=self.on_stop_recording)
         self.record_button.pack(fill="x", expand=0)
         self.tracklist = TrackList(master=self)
         self.tracklist.pack(fill="both", expand=1)
 
         # TODO: set_bpm call is just a debug option
         self.set_bpm(123)
+
         # start running
         self.mainloop()
 
@@ -51,19 +52,28 @@ class LemApp(tk.Tk):
         self.app_bar.update_bpm(bpm=bpm)
         self.record_button["state"] = "normal"
 
-    def stop_recording(self) -> None:
-        """A method to be passed as a callback to the RecordButton.
-        Adds track in the GUI only if the track was added in the logic (see Lem.post_production for more details).
-        """
-        if self.lem_state.stop_recording():    
-            self.tracklist.add_track()
-
     def destroy(self) -> None:
         """A method to be called when the user closes the app's main window. Ensures the state has terminated.
         """
         self.lem_state.terminate()
         return super().destroy()
 
+    """ The following functions are callbacks for various GUI elements """
+
+    def on_start_recording(self) -> None:
+        """A method to be passed as a callback to the RecordButton. Delegates the action to its state object.
+        """
+        self.lem_state.start_recording()
+
+    def on_stop_recording(self) -> None:
+        """A method to be passed as a callback to the RecordButton.
+        Adds track in the GUI only if the track was added in the logic (see Lem.post_production for more details).
+        """
+        if self.lem_state.stop_recording():
+            self.tracklist.add_track()
+
 
 if __name__ == "__main__":
     app = LemApp()
+
+# TODO: `method` vs `function`

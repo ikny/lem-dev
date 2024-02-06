@@ -107,20 +107,22 @@ class RecordButton(tk.Button):
     """A GUI class representing a two-state button through which users can start or stop recording of tracks.
     """
 
-    def __init__(self, master: tk.Misc, start_recording: Callable[[], None], stop_recording: Callable[[], None], **kwargs: Any) -> None:
+    def __init__(self, master: tk.Misc, on_start_recording: Callable[[], None] = lambda: None,
+                 on_stop_recording: Callable[[], None] = lambda: None, **kwargs: Any) -> None:
         """Build a new RecordButton.
 
         Args:
             master (tk.Misc): The parent widget.
-            start_recording (function): The callback to be called when the state changes to "recording" (on odd pushes).
-            stop_recording (function): The callback to be called when the state changes to "waiting" (on even pushes).
+            on_start_recording (function): The callback to be called when the state changes to "recording" (on odd pushes).
+            on_stop_recording (function): The callback to be called when the state changes to "waiting" (on even pushes).
         """
         super().__init__(master, text="Press to start recording (or press SPACE)", height=2,
                          command=self._clicked, **kwargs)
-        self.master.bind(sequence="<space>", func=lambda event: self._clicked())
+        self.master.bind(sequence="<space>",
+                         func=lambda event: self._clicked())
 
-        self.start_recording = start_recording
-        self.stop_recording = stop_recording
+        self.on_start_recording = on_start_recording
+        self.on_stop_recording = on_stop_recording
         self._state = "waiting"
 
     def _clicked(self) -> None:
@@ -128,11 +130,11 @@ class RecordButton(tk.Button):
         Based on the current state decides what callback should be called and changes its state.
         """
         if self._state == "waiting":
-            self.start_recording()
+            self.on_start_recording()
             self._state = "recording"
             self.config(text="Press to stop recording (or press SPACE)")
         else:
-            self.stop_recording()
+            self.on_stop_recording()
             self._state = "waiting"
             self.config(text="Press to start recording (or press SPACE)")
 

@@ -854,3 +854,47 @@ And just to see what I have already done:
 Nice!
 
 One more task: check whether I have mistaken the words `method` and `function` somewhere!
+
+Track deletion fixed, now stderr!
+1) How is it written?
+    - apparently it is written in C and propagates to stdout/stderr -> it can be redirected to logger/handling
+    - How I imagine it: I make a StderrRedirect class, which upon call will check whether the err is this alsa err. If yes, it will restart the stream and maybe show sth in the GUI.
+
+Perhaps, if the stream is ended by this error, I can just handle this in try-finally block! Check stream_active, and if it is supposed to be active and is not, call start_stream and finish! Maybe such a šaškování complicated thing as redirecting stdout is not necessary at all!
+
+**What The FUCK???**
+
+I have just replaced `while stream_active: pass with while stream_active: print(stream.active)`, and suddenly I can record 30 tracks without crashing? apparently the while True: pass loop is very CPU consuming..?
+
+ChatGPT says that it was a very tight loop... should I replace it with sleeping? And what does `sounddevice` documentation say about this?
+
+# This changes EVERYTHIOAYUNG
+By experimentally replacing the tight while loop with `input()`, I was able to reduce blocksize 1000 times. And still record two loops without any problems. When recording the third one, output underflow appeared, and the sound got clippy. But after stopping the recording (stopping allocating new memory? would preparing long zeros track and just changing the values work?) the stream continued just normally... Oh god. I need a moment to take this.
+
+## New plans
+Use `sleep()` or other way to block the execution. 
+- `stream.wait`?
+
+#### What are my priorities for the app?
+1) is theoretically safely written - every scenario is handled
+2) functions smoothly for recording ~4 tracks
+
+And voluntarily:
+
+3) is written in an elegant/clever way
+4) What also changed now is that all those small features as "turn off the metronome" etc. grew a lot in the level of importance...
+
+So... the plan now is probably to just play with all the TODOs so that the first two criteria are met. Handle all the errs and try to optimalize.
+
+The small errs are just routine. However, the other group of errs is much more difficult to think through and find workarounds. The following I would classify as the other group:
+- output underflow
+- stream exceptions
+
+Setting the blocksize to 0 kinda works very well! I have to try that with my keyboard so that I know how good it really is for music making. I also want to try whether the stream is smoother using `blocksize = 2^n`.
+
+1) is theoretically safely written - every scenario is handled
+    - TODOs
+    - err handling
+    - testing on other computers
+2) functions smoothly for recording ~4 tracks
+    - align not only the length, but also the start & the end of the recording to the BPM (sometimes when I finish a recording of a track, it's end plays again for a little while, I am not sure why)
