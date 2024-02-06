@@ -1,5 +1,6 @@
 from typing import Any
 import numpy.typing as npt
+import logging
 
 import sounddevice as sd
 import numpy as np
@@ -16,6 +17,11 @@ DTYPE = np.int16
 STR_DTYPE = "int16"
 
 METRONOME_SAMPLE_PATH = "lib/samples/metronome.wav"
+
+
+logger = logging.getLogger(name=__name__)
+logging.basicConfig(
+    format="%(asctime)s %(name)s %(message)s", level=logging.DEBUG)
 
 
 class Lem():
@@ -87,18 +93,25 @@ class Lem():
         """
         self._stream_manager.start_recording()
 
-    def stop_recording(self) -> None:
+    def stop_recording(self) -> bool:
         """Delegate the stop to its stream manager. 
         This returns the new track, which is then passed to post production function.
-        """
-        recorded_track = self._stream_manager.stop_recording()
-        self.post_production(recorded_track=recorded_track)
 
-    def post_production(self, recorded_track: npt.NDArray[DTYPE]) -> None:
+        Returns:
+            bool: Passes the value returned by the post_production method
+        """        
+        recorded_track = self._stream_manager.stop_recording()
+        return self.post_production(recorded_track=recorded_track)
+
+    def post_production(self, recorded_track: npt.NDArray[DTYPE]) -> bool:
         """Cut/fill newly recorded track to whole bpm and add it to tracks.
 
         Args:
             recorded_track (npt.NDArray[DTYPE]): The audio data to be modified.
+
+        Returns:
+            bool: True if the track was long at least one beat, thus it was actually added into tracks. 
+            False if the rounding resulted in an empty track.
         """
         remainder = len(recorded_track) % self.len_beat
 
@@ -113,6 +126,8 @@ class Lem():
         if len(recorded_track):
             self._tracks.append(recorded_track)
             self._update_tracks()
+            return True
+        return False
 
     def delete_track(self, idx: int) -> None:
         """Removes the track with on index idx+1, because the first track is the metronome sample.

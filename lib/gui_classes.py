@@ -36,6 +36,7 @@ class BpmPopup(tk.Toplevel):
         self._confirm = tk.Button(
             master=self, text="Confirm!", command=self.set_bpm)
         self._confirm.pack(side="bottom", padx=5, pady=5)
+        self.bind(sequence="<Return>", func=lambda event: self.set_bpm())
 
     def validate(self, value: str) -> bool:
         """A method evaluating whether the value meets the conditions for suitable BPM (an integer between 1 and 400)
@@ -116,6 +117,8 @@ class RecordButton(tk.Button):
         """
         super().__init__(master, text="Press to start recording (or press SPACE)", height=2,
                          command=self._clicked, **kwargs)
+        self.master.bind(sequence="<space>", func=lambda event: self._clicked())
+
         self.start_recording = start_recording
         self.stop_recording = stop_recording
         self._state = "waiting"

@@ -35,6 +35,8 @@ class LemApp(tk.Tk):
         self.tracklist = TrackList(master=self)
         self.tracklist.pack(fill="both", expand=1)
 
+        # TODO: set_bpm call is just a debug option
+        self.set_bpm(123)
         # start running
         self.mainloop()
 
@@ -51,9 +53,10 @@ class LemApp(tk.Tk):
 
     def stop_recording(self) -> None:
         """A method to be passed as a callback to the RecordButton.
+        Adds track in the GUI only if the track was added in the logic (see Lem.post_production for more details).
         """
-        self.lem_state.stop_recording()
-        self.tracklist.add_track()
+        if self.lem_state.stop_recording():    
+            self.tracklist.add_track()
 
     def destroy(self) -> None:
         """A method to be called when the user closes the app's main window. Ensures the state has terminated.

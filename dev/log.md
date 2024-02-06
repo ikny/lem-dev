@@ -766,3 +766,91 @@ And everything fails on **EIGHT** tracks, not three like before!! seems like num
 
 ## 1.2.
 Trying to get into the error handling, but it seems there is no way I can just ignore the alsa error :C. The easy solution is now to set the blocksize, sampling frequency and datatypes etc. so that the system is robust enough. Maybe also a cap on the number of tracks would be great.
+
+
+## 3.2.
+So, I have found some more bugs: 
+- When I delete tracks too fast, apparently it breaks the indexing of `_tracks` somehow lol. Afterwards, any attempt to delete a track fails.
+    - -> Some form of lock or a queue would probably improve this situation.
+- When the track is too short, it is not added in the logic, but it is added in the GUI
+    - -> add tracks from the gui? Adds tight coupling, but there ought to be a way to do it. 
+
+As for the previously discussed error, it would really be best if my program could detect the error and at least restart the stream without loosing all the data...
+
+And after a bit of scientific method (fa & fo):
+> If an exception is raised in the callback, it will not be called again.
+> - under **callback** at https://python-sounddevice.readthedocs.io/en/0.4.6/api/streams.html#streams-using-numpy-arrays
+
+## 5.2.
+Today's plan: Catch **ALSA Err** if you can. If you can't, just note how it works, so you can:
+1) find an easy workaround (probably not reading stdout, as that would be time consuming, but idk), or...
+2) argument why it is not possible
+
+Afterwards, I can solve the bugs above.
+
+### ALSA Err:
+```
+(.venv) vojtech@flash-gordon:~/programování/lem/lem-dev$ /home/vojtech/programování/lem/lem-dev/.venv/bin/python /home/vojtech/programování/lem/lem-dev/lib/main.py
+ALSA lib pcm.c:8568:(snd_pcm_recover) underrun occurred
+Expression 'err' failed in 'src/hostapi/alsa/pa_linux_alsa.c', line: 3355
+Expression 'ContinuePoll( self, StreamDirection_In, &pollTimeout, &pollCapture )' failed in 'src/hostapi/alsa/pa_linux_alsa.c', line: 3907
+Expression 'PaAlsaStream_WaitForFrames( stream, &framesAvail, &xrun )' failed in 'src/hostapi/alsa/pa_linux_alsa.c', line: 4285
+```
+
+As shown above, those errors are propagated to stderr in such a way I cannot catch them.
+Some solutions I came across:
+- redirect stderr:
+    ```py
+    import sys
+
+    class StderrRedirect:
+        def write(self, s):
+            # Handle the error message here
+            pass
+
+        def flush(self):
+            pass
+
+    sys.stderr = StderrRedirect()
+    ```
+- perform various optimizations...
+    - I could deploy a worker process to pre-mix the tracks - a lot of work, uncertain...
+
+But, a good point based on github copilot snippet:
+**A callback should not be the place, where the heavy processing is done.** To ensure the smoothness of audio playback, the callback shloud only get the data and pass the right amount of it as outdata. Some of the processing can be done beforehand, maybe in a separate process.
+
+#### A design started to crystalize in my mind...
+The `callback`: 
+- gets [frames] of data from queue, joins it with indata, passes it as outdata
+- handles empty queue -> write zeros or sth... or just wire...
+
+The `worker`:
+- could be a separate process, so it actually leverages CPU power
+- pre-mixes the tracks so that the `callback` only adds the indata
+- holds constant length of the premixed queue, sleeps when necessary
+
+## 6.2.
+Plan for today: debug and brush up a version I can hand in as a final product. 
+
+Testing the implementation of the above mentioned architecture will be relevant later, as I do not want to be dependant on that (would create immense amount of stress lol).
+
+So, a **TODO** one more time:
+- When I delete tracks too fast, apparently it **breaks the indexing of `_tracks`** somehow lol. Afterwards, any attempt to delete a track fails.
+    - -> will this persist if I fix the following bug?
+- When the **track is too short**, it is not added in the logic, but it **is added in the GUI**
+    - -> add tracks from the gui? Adds tight coupling, but there ought to be a way to do it. 
+- **stderr redirect**
+
+
+And just to see what I have already done:
+1) ~~complete the callback in stream manager using numpy methods~~
+2) ~~test the functionality after the update~~
+3) ensure error safety with alsa
+4) ~~bind the tk buttons to keyboard input~~
+5) complete the remaining todos
+6) do some testing on other computers, so it will not break when my opponent tries to run it.
+7) get the sources Kryl gave me and find some useful information in them
+
+Nice!
+
+One more task: check whether I have mistaken the words `method` and `function` somewhere!
