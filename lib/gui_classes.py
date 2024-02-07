@@ -1,8 +1,21 @@
 import tkinter as tk
 from typing import Any, Callable
+from typing_extensions import Literal
 
 from lem import Lem
 from main import LemApp
+
+
+class ErrorPopup(tk.Toplevel):
+    """A GUI class representing a popup window for displaying an error.
+    """
+
+    def __init__(self, master: tk.Misc, message: str, **kwargs: Any) -> None:
+        super().__init__(master, **kwargs)
+
+        self.title("Error message")
+        self.message = tk.Label(master=self, text=message)
+        self.message.pack(padx=10, pady=10)
 
 
 class BpmPopup(tk.Toplevel):
@@ -71,11 +84,10 @@ class AppBar(tk.Frame):
     This button is destroyed afterwards.
     """
 
-    def __init__(self, state: Lem, master: LemApp, **kwargs: Any) -> None:
+    def __init__(self, master: LemApp, **kwargs: Any) -> None:
         """Build a new AppBar.
 
         Args:
-            state (Lem): The main state class, managing all the logic.
             master (LemApp): The parent widget. Must be an instance of Lem class (the top level gui class of this project).
         """
         super().__init__(master, **kwargs)
@@ -173,7 +185,7 @@ class TrackList(tk.Frame):
         self._scrollable.config(yscrollcommand=self._scroller.set)
 
     def add_track(self) -> None:
-        """Create a new Track instance and call the _update_sizes function, which updates the scrollable region.
+        """Create a new Track instance and call the _update_sizes method, which updates the scrollable region.
         """
         track = Track(id=self._free_id,
                       master=self._track_frame, tracklist=self)

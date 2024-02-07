@@ -19,7 +19,7 @@ class LemApp(tk.Tk):
         """
         super().__init__(screenName, baseName, className, useTk, sync, use)
 
-        self.lem_state = Lem()
+        self.lem_state = Lem(error_callback=self.show_err)
 
         # set GUI to darkmode
         self.tk_setPalette(background='#181818', foreground='#DDD78D')
@@ -27,7 +27,7 @@ class LemApp(tk.Tk):
         self.title("lem Looper Emulator")
 
         # create GUI elements
-        self.app_bar = AppBar(state=self.lem_state, master=self)
+        self.app_bar = AppBar(master=self)
         self.app_bar.pack()
         self.record_button = RecordButton(
             master=self, state="disabled", on_start_recording=self.on_start_recording, on_stop_recording=self.on_stop_recording)
@@ -36,21 +36,23 @@ class LemApp(tk.Tk):
         self.tracklist.pack(fill="both", expand=1)
 
         # TODO: set_bpm call is just a debug option
-        self.set_bpm(123)
+        #self.set_bpm(123)
 
         # start running
         self.mainloop()
 
     def set_bpm(self, bpm: int) -> None:
-        """Prepares the state and the GUI for the actual recording flow. 
+        """Calls the initialization method of Lem. If everything succeeds, prepares the GUI for the actual recording flow. 
 
         Args:
             bpm (int): The value the user has entered into BpmPopup.
         """
-        self.lem_state.initialize_stream(bpm=bpm)
+        if self.lem_state.initialize_stream(bpm=bpm):
+            self.app_bar.update_bpm(bpm=bpm)
+            self.record_button["state"] = "normal"
 
-        self.app_bar.update_bpm(bpm=bpm)
-        self.record_button["state"] = "normal"
+    def show_err(self, message: str) -> None:
+        ErrorPopup(master=self, message=message)
 
     def destroy(self) -> None:
         """A method to be called when the user closes the app's main window. Ensures the state has terminated.
@@ -58,7 +60,7 @@ class LemApp(tk.Tk):
         self.lem_state.terminate()
         return super().destroy()
 
-    """ The following functions are callbacks for various GUI elements """
+    """ The following methods are callbacks for GUI elements """
 
     def on_start_recording(self) -> None:
         """A method to be passed as a callback to the RecordButton. Delegates the action to its state object.
@@ -75,5 +77,3 @@ class LemApp(tk.Tk):
 
 if __name__ == "__main__":
     app = LemApp()
-
-# TODO: `method` vs `function`

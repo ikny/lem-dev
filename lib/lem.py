@@ -1,5 +1,5 @@
 from time import sleep
-from typing import Any, TextIO
+from typing import Any, Callable, TextIO
 import numpy.typing as npt
 import logging
 import sys
@@ -12,7 +12,7 @@ import threading
 
 SAMPLERATE = 44100  # [samples per second]
 # TODO: is setting blocksize to zero OK for the UX?
-BLOCKSIZE = 10   # [samples]
+BLOCKSIZE = 100   # [samples]
 CHANNELS = 2
 LATENCY = 0
 
@@ -34,28 +34,42 @@ class Lem():
     adding, removing and modifying individual tracks. 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, error_callback: Callable[[str], Any]) -> None:
         """Initialize a new instance of Lem (looper emulator).
         """
+        self._error_callback = error_callback
+
         self._stream_manager: LoopStreamManager = LoopStreamManager()
 
         self._tracks: list[npt.NDArray[DTYPE]] = []
 
         self._metronome_volume = 1/8
 
-    def initialize_stream(self, bpm: int) -> None:
+    def initialize_stream(self, bpm: int) -> bool:
         """Prepare the metronome, so the user can start to record tracks, and start a stream.
 
         Args:
             bpm (int): The number of metronome beats per minute.
+
+        Returns:
+            bool: True if both the metronome and the stream were initialized successfully. 
+            False if an error was encountered when opening/reading the sample or starting a stream.
         """
-        # initialize the metronome sample and start a stream
-        metronome = self.metronome_generator(
-            bpm=bpm, path=METRONOME_SAMPLE_PATH)
+        try:
+            metronome = self.metronome_generator(
+                bpm=bpm, path=METRONOME_SAMPLE_PATH)
+        except Exception as e:
+            self._error_callback(
+                f"Exception was raised when trying to open the metronome sample:\n\n{e}")
+            return False
+
         self._tracks.append(metronome)
         self._update_tracks()
 
+        # TODO: handle errors when starting the stream
         self._stream_manager.start_stream()
+
+        return True
 
     def terminate(self) -> None:
         """Delegate the closing of the stream to stream manager.
@@ -73,7 +87,6 @@ class Lem():
             npt.NDArray[DTYPE]: The resulting metronome sample long exactly one beat of the given BPM.
         """
         sample: npt.NDArray[DTYPE]
-        # TODO: handle errors when getting the sample
         sample, samplerate = sf.read(file=path, dtype=STR_DTYPE)
 
         desired_len = int((60*samplerate)/bpm)
@@ -98,7 +111,7 @@ class Lem():
 
     def stop_recording(self) -> bool:
         """Delegate the stop to its stream manager. 
-        This returns the new track, which is then passed to post production function.
+        This returns the new track, which is then passed to post production method.
 
         Returns:
             bool: Passes the value returned by the post_production method
@@ -142,7 +155,7 @@ class Lem():
         self._update_tracks()
 
     def _update_tracks(self) -> None:
-        """Pass self._tracks to update_tracks function of its stream manager.
+        """Pass self._tracks to update_tracks method of its stream manager.
         """
         self._stream_manager.update_tracks(tracks=self._tracks)
 
@@ -191,7 +204,7 @@ class LoopStreamManager():
 
     def start_recording(self) -> None:
         """Set the _recording flag to True. This works because 
-        the callback function checks the flag when deciding whether to store indata.
+        the callback method checks the flag when deciding whether to store indata.
         """
         self._recording = True
 
@@ -223,7 +236,7 @@ class LoopStreamManager():
 
         def callback(indata: npt.NDArray[DTYPE], outdata: npt.NDArray[DTYPE],
                      frames: int, time: Any, status: sd.CallbackFlags) -> None:
-            """The callback function, which is called by the stream every time it needs audio data.
+            """The callback method, which is called by the stream every time it needs audio data.
             As mentioned in the sounddevice documentation, the callback has to have these arguments and return None.
             For more information about callback see: https://python-sounddevice.readthedocs.io/en/0.4.6/api/streams.html#streams-using-numpy-arrays.
 
@@ -267,7 +280,6 @@ class LoopStreamManager():
 
             outdata[:] = mixed_data
 
-            # TODO: if necessary, keep the current_frame small enough not to make problems
             self._current_frame += frames
 
         with sd.Stream(samplerate=SAMPLERATE, blocksize=BLOCKSIZE, dtype=STR_DTYPE,

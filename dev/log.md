@@ -898,3 +898,7 @@ Setting the blocksize to 0 kinda works very well! I have to try that with my key
     - testing on other computers
 2) functions smoothly for recording ~4 tracks
     - align not only the length, but also the start & the end of the recording to the BPM (sometimes when I finish a recording of a track, it's end plays again for a little while, I am not sure why)
+
+## 7.2.
+I was keen on starting optimalisation, however, I have realized that first it is good to write all the error handling.
+
