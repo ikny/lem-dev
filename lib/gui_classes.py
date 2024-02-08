@@ -1,8 +1,6 @@
 import tkinter as tk
 from typing import Any, Callable
-from typing_extensions import Literal
 
-from lem import Lem
 from main import LemApp
 
 

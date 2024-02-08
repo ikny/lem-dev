@@ -1,6 +1,7 @@
 import tkinter as tk
 from gui_classes import *
-from lem import Lem
+from lem import Lem, METRONOME_SAMPLE_PATH
+from soundfile import LibsndfileError
 
 
 class LemApp(tk.Tk):
@@ -19,7 +20,7 @@ class LemApp(tk.Tk):
         """
         super().__init__(screenName, baseName, className, useTk, sync, use)
 
-        self.lem_state = Lem(error_callback=self.show_err)
+        self.lem_state = Lem()
 
         # set GUI to darkmode
         self.tk_setPalette(background='#181818', foreground='#DDD78D')
@@ -47,9 +48,17 @@ class LemApp(tk.Tk):
         Args:
             bpm (int): The value the user has entered into BpmPopup.
         """
-        if self.lem_state.initialize_stream(bpm=bpm):
-            self.app_bar.update_bpm(bpm=bpm)
-            self.record_button["state"] = "normal"
+        try:
+            self.lem_state.initialize_stream(bpm=bpm)
+        except LibsndfileError:
+            self.show_err(message=f"""The file on specified path could not be opened. \nPlease check that path "{METRONOME_SAMPLE_PATH}" contains valid audio file.""")
+            return
+        except Exception as e:
+            self.show_err(f"An unexpected error occured: \n{e}")
+            return
+
+        self.app_bar.update_bpm(bpm=bpm)
+        self.record_button["state"] = "normal"
 
     def show_err(self, message: str) -> None:
         ErrorPopup(master=self, message=message)
@@ -59,8 +68,6 @@ class LemApp(tk.Tk):
         """
         self.lem_state.terminate()
         return super().destroy()
-
-    """ The following methods are callbacks for GUI elements """
 
     def on_start_recording(self) -> None:
         """A method to be passed as a callback to the RecordButton. Delegates the action to its state object.

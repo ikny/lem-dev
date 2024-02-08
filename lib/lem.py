@@ -1,8 +1,6 @@
 from time import sleep
-from typing import Any, Callable, TextIO
+from typing import Any
 import numpy.typing as npt
-import logging
-import sys
 
 import sounddevice as sd
 import numpy as np
@@ -11,7 +9,6 @@ import threading
 
 
 SAMPLERATE = 44100  # [samples per second]
-# TODO: is setting blocksize to zero OK for the UX?
 BLOCKSIZE = 100   # [samples]
 CHANNELS = 2
 LATENCY = 0
@@ -21,11 +18,6 @@ STR_DTYPE = "int16"
 
 METRONOME_SAMPLE_PATH = "lib/samples/metronome.wav"
 
-# TODO: if the logger is not used in the final code, delete it
-logger = logging.getLogger(name=__name__)
-logging.basicConfig(
-    format="%(asctime)s %(name)s %(message)s", level=logging.DEBUG)
-
 
 class Lem():
     """Handles the logic of the looper emulator. 
@@ -34,10 +26,9 @@ class Lem():
     adding, removing and modifying individual tracks. 
     """
 
-    def __init__(self, error_callback: Callable[[str], Any]) -> None:
+    def __init__(self) -> None:
         """Initialize a new instance of Lem (looper emulator).
         """
-        self._error_callback = error_callback
 
         self._stream_manager: LoopStreamManager = LoopStreamManager()
 
@@ -45,7 +36,7 @@ class Lem():
 
         self._metronome_volume = 1/8
 
-    def initialize_stream(self, bpm: int) -> bool:
+    def initialize_stream(self, bpm: int) -> None:
         """Prepare the metronome, so the user can start to record tracks, and start a stream.
 
         Args:
@@ -55,21 +46,13 @@ class Lem():
             bool: True if both the metronome and the stream were initialized successfully. 
             False if an error was encountered when opening/reading the sample or starting a stream.
         """
-        try:
-            metronome = self.metronome_generator(
-                bpm=bpm, path=METRONOME_SAMPLE_PATH)
-        except Exception as e:
-            self._error_callback(
-                f"Exception was raised when trying to open the metronome sample:\n\n{e}")
-            return False
+        metronome = self.metronome_generator(
+            bpm=bpm, path=METRONOME_SAMPLE_PATH)
 
         self._tracks.append(metronome)
         self._update_tracks()
 
-        # TODO: handle errors when starting the stream
         self._stream_manager.start_stream()
-
-        return True
 
     def terminate(self) -> None:
         """Delegate the closing of the stream to stream manager.
@@ -85,7 +68,13 @@ class Lem():
 
         Returns:
             npt.NDArray[DTYPE]: The resulting metronome sample long exactly one beat of the given BPM.
+
+        Raises:
+            soundfile.LibsndfileError: If the file on path could not be opened.
+            TypeError: If the dtype could not be recognized.
+            ZeroDivisionError: If bpm = 0.
         """
+
         sample: npt.NDArray[DTYPE]
         sample, samplerate = sf.read(file=path, dtype=STR_DTYPE)
 
@@ -146,7 +135,7 @@ class Lem():
         return False
 
     def delete_track(self, idx: int) -> None:
-        """Removes the track with on index idx+1, because the first track is the metronome sample.
+        """Removes the track on index idx+1, because the first track is the metronome sample.
 
         Args:
             idx (int): The index of the track which is being deleted.
@@ -194,7 +183,8 @@ class LoopStreamManager():
         self._stream_thread.start()
 
     def end_stream(self) -> None:
-        """Set stream_active to false. If the stream was already initialized, wait for the thread to end. 
+        """Set stream_active to false and wait for the stream thread to end. 
+        If the stream was not initialized yet, there is no waiting.
         """
         self._stream_active = False
         try:
@@ -282,9 +272,6 @@ class LoopStreamManager():
 
             self._current_frame += frames
 
-        with sd.Stream(samplerate=SAMPLERATE, blocksize=BLOCKSIZE, dtype=STR_DTYPE,
-                       channels=CHANNELS, callback=callback) as stream:
+        with sd.Stream(samplerate=SAMPLERATE, blocksize=BLOCKSIZE, dtype=STR_DTYPE, channels=CHANNELS, callback=callback):
             while self._stream_active:
                 sleep(1)
-
-        # TODO: handle exceptions (nest with block into try-except block)

@@ -902,3 +902,22 @@ Setting the blocksize to 0 kinda works very well! I have to try that with my key
 ## 7.2.
 I was keen on starting optimalisation, however, I have realized that first it is good to write all the error handling.
 
+Question (after a lot of work was already done, upsiee): is the way I handle errors unnecessary complicated? Could those errors be handled in \_\_main__? And even if yes, would it still work when multithreading/processing?
+
+How should even propper error handling look like? should every function have try except blocks and handle its own errors? For example in metro_gen: should I first check if bpm>0 and raise an error if necessary, or is it ok to just let the error happen? This is some high quality dev shit for tomorrow!
+
+## 8.2.
+I am learning about exception patterns, gotta make ipynb just for that... and afterwards, I'll probably delete "exception callbacks" I wrote yesterday, and let those Errs propagate to main, which will handle them.
+
+Now I found out I do not use *Sphinx* docstrings but the *Google* ones. I have decided to keep it like this, because they are more readable in the code.
+
+But for the exceptions: right now, I really do not know how to handle them properly, so I would like to discuss this with Kryl. What can I do now is identify all the places where some exception can occur. Would a solution be to raise my exceptions with meaningful messages in all these places, and in LemApp just pass the message to the GUI? That would be good for the user, but would that be good dev-wise?
+
+However, consultation is not today and I want to finish up, so lets try to work through thiss mess to the right solution. Few principles are already clear:
+1) Handle the exception at the level that knows how to handle them.
+2) If, at the low-level, you do not intend to log the exception nor do anything else about it, it is fine to omit the try-except block. 
+3) However, if the function is likely to raise a specific exception, it should be documented for the caller can handle it based on the provided information.
+
+My added one:
+4) this could lead to the need of specifying that in every level of some nested function, so I have decided to just do it at the lowest level. Perhaps Kryl will enlighten me in the matter of exception handling.
+
