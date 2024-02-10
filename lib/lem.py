@@ -237,10 +237,9 @@ class LoopStreamManager():
                 time (Any): A timestamp of the capture of the first indata frame.
                 status (sd.CallbackFlags): CallbackFlags object, indicating whether input/output under/overflow is happening.
             """
-
-            # TODO: replace this with error handling
-            if status:
-                print(status)
+            if status.output_underflow:
+                outdata.fill(0)
+                return
 
             if not self._tracks_lock.locked():
                 tracks = self._tracks
@@ -250,9 +249,6 @@ class LoopStreamManager():
             if self._recording:
                 self._recorded_track = np.concatenate(
                     [self._recorded_track, indata])
-
-            # TODO: implement a "numpy circular buffer"? - ease up slicing, but not at cost of speed...
-            # also bonus points for IT datastructure lol
 
             sliced_data = [indata]
             # slice

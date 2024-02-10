@@ -921,3 +921,23 @@ However, consultation is not today and I want to finish up, so lets try to work 
 My added one:
 4) this could lead to the need of specifying that in every level of some nested function, so I have decided to just do it at the lowest level. Perhaps Kryl will enlighten me in the matter of exception handling.
 
+### This is strange
+Suddenly I am able to record 60 tracks and everything functions normally. Not a single output overflow printed... I will just assume that the program miraculously fixed itself, and focus on the real problem: 
+
+**starting recording on beat**. I suppose the easiest solution would be to implement some sort of clock, and synchronize the metronome sample to it.
+
+After examining the metronome sample in audacity, it seems that the main click is happening in the first 20 ms, so just create a clock on time would probably work and nobody would notice... now I realized that the easiest solution is probably again modulo frames or so... this would start recording on **the next** beat, but would not work to include the bit of sound before the start of recording, if it came slightly later than it should...
+
+## 10.2.
+### Starting on a beat
+Adding the feature above. If the `post_production` gets the track including the whole beats in which the `start` and the `end` happened, and the indexes ("framestamps") on which they happened, it is very easy to determine which beats should be included in the track and which should not (round the track).
+
+So the `StreamManager` needs to include the starting and the ending beat. 
+
+#### Ending beat
+For the ending beat, this should be fairly easy (`stop_recording()` sets flag `stopping recording` to True. Callback calculates where "the beat" is \[there should always be one callback call "on beat"] and if `stopping recording` is True and it is "on beat" callback, `_recording` is set to False).
+
+#### Starting beat
+For the starting beat this means to have some sort of buffer containing the past input from the last beat until now. This could be circular buffer, being rewrited every beat ("on beat" is on idx zero). When `start_recording()` happens, \[0:now] (that is \[last_beat:now]) of this buffer is taken as a base for `recorded_track`. 
+
+How to determine "now"? `current_frame % len_beat` should work.
