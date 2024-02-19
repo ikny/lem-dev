@@ -11,6 +11,7 @@ from time import sleep
 from constants import *
 from tracks import RecordedTrack, PlayingTrack
 from custom_exceptions import InvalidSamplerateError
+from utils import Queue, CircularBuffer
 
 
 class Lem():
@@ -28,7 +29,7 @@ class Lem():
         """
         # rounding to int introduces a slight distortion of bpm
         self._len_beat = int(60*SAMPLERATE/bpm)
-        self._stream_manager = LoopStreamManager()
+        self._stream_manager = LoopStreamManager(len_beat=self._len_beat)
         self._tracks: list[PlayingTrack] = []
 
         self.initialize_metronome()
@@ -129,23 +130,33 @@ class LoopStreamManager():
     https://python-sounddevice.readthedocs.io/en/0.4.6/api/index.html.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, len_beat: int) -> None:
         """Initialize a new LoopStreamManager object.
         """
+        if len_beat < 0:
+            raise ValueError("len_beat must not be negative")
+
+        self._len_beat = len_beat
+
         # flags
-        self._recording = False
         self._stream_active = True
+
+        self._start_recording = False
+        self._recording = False
+        self._stop_recording = False
 
         self._current_frame = 0
 
+        # audio data
         self._stream_thread: threading.Thread
-        # the audio data to be played
         self._tracks: list[PlayingTrack] = []
-        # the synchronized backup of _tracks which is used as a data source when the _tracks are being updated
         self._tracks_copy: list[PlayingTrack] = self._tracks
         self._tracks_lock: threading.Lock = threading.Lock()
 
+        self._last_beat = CircularBuffer(
+            length=self._len_beat, channels=CHANNELS, dtype=DTYPE)
         self._recorded_track = RecordedTrack()
+        self._recorded_tracks_queue = Queue()
 
     def start_stream(self) -> None:
         """Make a new thread, in which the stream will be active
@@ -167,17 +178,23 @@ class LoopStreamManager():
         """Set the _recording flag to True. This works because 
         the callback method checks the flag when deciding whether to store indata.
         """
-        self._recording = True
+        self._start_recording = True
 
     def stop_recording(self) -> RecordedTrack:
-        """Set the _recording flag to False and prepare _recording_track for new recording.
+        # TODO: check all the documentation for correct types
+        """Sets the _recording flag to False. 
+        Waits until the recording stops and afterwards prepares _recording_track for new recording.
 
         Returns:
             npt.NDArray[DTYPE]: The recorded track.
         """
-        self._recording = False
-        recorded_track = self._recorded_track
-        self._recorded_track = RecordedTrack()
+        self._stop_recording = True
+        while True:
+            try:
+                recorded_track: RecordedTrack = self._recorded_tracks_queue.pop()
+                break
+            except IndexError:
+                sleep(0.001)
         return recorded_track
 
     def update_tracks(self, tracks: list[PlayingTrack]) -> None:
@@ -221,13 +238,38 @@ class LoopStreamManager():
                 time (Any): A timestamp of the capture of the first indata frame.
                 status (sd.CallbackFlags): CallbackFlags object, indicating whether input/output under/overflow is happening.
             """
+            # TODO: get status first and execute afterwards #unbreakable
             # handle errs
             if status.output_underflow:
                 outdata.fill(0)
                 return
+            
+            # Determine, whether this callback is on beat, because recording can end only on beat.
+            on_beat = False
+            position_in_beat = self._current_frame % self._len_beat
+            if position_in_beat+frames >= self._len_beat:
+                on_beat = True
+
+            self._last_beat.write(data=indata)
+
+            if self._start_recording:
+                self._recorded_track.first_frame_time = self._current_frame - self._last_beat.position()
+                self._recorded_track.start_rec_time = self._current_frame
+                self._recorded_track.append(data=self._last_beat.start_to_index())
+                self._start_recording = False
+                self._recording = True
 
             if self._recording:
                 self._recorded_track.append(data=indata)
+
+            if self._stop_recording and not self._recorded_track.stop_rec_time:
+                self._recorded_track.stop_rec_time = self._current_frame
+
+            if self._stop_recording and on_beat:
+                self._recorded_tracks_queue.push(item=self._recorded_track)
+                self._recorded_track = RecordedTrack()
+                self._recording = False
+                self._stop_recording = False
 
             outdata[:] = slice_and_mix(indata=indata, frames=frames)
 
