@@ -22,7 +22,7 @@ class Track():
 
 class RecordedTrack(Track):
     """A naive track which is currently being recorded. 
-    Does not check whether the values it hold make sense (stop_rec_time is before start_rec_time etc.). 
+    Does not check whether the values it holds make sense (stop_rec_time can be before start_rec_time etc.). 
     """
 
     def __init__(self, data: npt.NDArray[DTYPE] = np.empty((0, CHANNELS), dtype=DTYPE)) -> None:

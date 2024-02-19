@@ -1,12 +1,13 @@
 # types
 from typing import Optional
-#libs
+# libs
 import tkinter as tk
 from soundfile import LibsndfileError
 # parts of project
 from gui_classes import *
 from lem import Lem
-from constants import METRONOME_SAMPLE_PATH
+from constants import METRONOME_SAMPLE_PATH, SAMPLERATE
+from custom_exceptions import InvalidSamplerateError
 
 
 class LemApp(tk.Tk):
@@ -57,8 +58,15 @@ class LemApp(tk.Tk):
             self.lem_state = Lem(bpm=bpm)
         except LibsndfileError:
             self.show_err(
-                message=f"""The file on specified path could not be opened. \nPlease check that path "{METRONOME_SAMPLE_PATH}" contains valid audio file.""")
+                message=f"""
+                The file on specified path could not be opened. 
+                Please check that path "{METRONOME_SAMPLE_PATH}" contains valid audio file.""")
             return
+        except InvalidSamplerateError:
+            self.show_err(
+                message=f"""
+                The samplerate of the provided metronome sample does not match the required samplerate ({SAMPLERATE}).
+                Please provide a valid audio file.""")
         except Exception as e:
             self.show_err(f"An unexpected error occured: \n{e}")
             return
