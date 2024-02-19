@@ -1,22 +1,14 @@
-from time import sleep
+# types
 from typing import Any
 import numpy.typing as npt
-
+# libs
 import sounddevice as sd
 import numpy as np
 import soundfile as sf
 import threading
-
-
-SAMPLERATE = 44100  # [samples per second]
-BLOCKSIZE = 100   # [samples]
-CHANNELS = 2
-LATENCY = 0
-
-DTYPE = np.int16
-STR_DTYPE = "int16"
-
-METRONOME_SAMPLE_PATH = "lib/samples/metronome.wav"
+from time import sleep
+# parts of project
+from constants import *
 
 
 class Lem():

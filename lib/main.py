@@ -1,8 +1,12 @@
-import tkinter as tk
+# types
 from typing import Optional
-from gui_classes import *
-from lem import Lem, METRONOME_SAMPLE_PATH
+#libs
+import tkinter as tk
 from soundfile import LibsndfileError
+# parts of project
+from gui_classes import *
+from lem import Lem
+from constants import METRONOME_SAMPLE_PATH
 
 
 class LemApp(tk.Tk):
