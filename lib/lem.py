@@ -9,6 +9,7 @@ import threading
 from time import sleep
 # parts of project
 from constants import *
+from tracks import RecordedTrack, PlayingTrack
 
 
 class Lem():
@@ -25,7 +26,7 @@ class Lem():
             bpm (int): Beats per minute. This class presumes that 0 < bpm < musically reasonable value (400).
         """
         self._stream_manager = LoopStreamManager()
-        self._tracks: list[npt.NDArray[DTYPE]] = []
+        self._tracks: list[PlayingTrack] = []
         self._len_beat: int
         self._metronome_volume = 1
 
@@ -44,7 +45,7 @@ class Lem():
         metronome = self.metronome_generator(
             bpm=bpm, path=METRONOME_SAMPLE_PATH)
 
-        self._tracks.append(metronome)
+        self._tracks.append(PlayingTrack(data=metronome))
         self._update_tracks()
 
         self._stream_manager.start_stream()
@@ -103,7 +104,7 @@ class Lem():
         recorded_track = self._stream_manager.stop_recording()
         return self.post_production(recorded_track=recorded_track)
 
-    def post_production(self, recorded_track: npt.NDArray[DTYPE]) -> bool:
+    def post_production(self, recorded_track: RecordedTrack) -> bool:
         """Cut/fill newly recorded track to whole bpm and add it to tracks.
 
         Args:
@@ -113,18 +114,19 @@ class Lem():
             bool: True if the track was long at least one beat, thus it was actually added into tracks. 
             False if the rounding resulted in an empty track.
         """
-        remainder = len(recorded_track) % self._len_beat
+        data = recorded_track.data
+        remainder = len(data) % self._len_beat
 
         if remainder > self._len_beat/2:
             zeros = np.zeros(
                 shape=(self._len_beat-remainder, CHANNELS), dtype=DTYPE)
-            recorded_track = np.concatenate([recorded_track, zeros])
+            data = np.concatenate([data, zeros])
         elif remainder <= self._len_beat/2:
-            recorded_track = recorded_track[:len(
-                recorded_track)-remainder]
+            data = data[:len(
+                data)-remainder]
 
-        if len(recorded_track):
-            self._tracks.append(recorded_track)
+        if len(data):
+            self._tracks.append(PlayingTrack(data=data))
             self._update_tracks()
             return True
         return False
@@ -163,13 +165,12 @@ class LoopStreamManager():
 
         self._stream_thread: threading.Thread
         # the audio data to be played
-        self._tracks: list[npt.NDArray[DTYPE]] = []
+        self._tracks: list[PlayingTrack] = []
         # the synchronized backup of _tracks which is used as a data source when the _tracks are being updated
-        self._tracks_copy: list[npt.NDArray[DTYPE]]
+        self._tracks_copy: list[PlayingTrack] = self._tracks
         self._tracks_lock: threading.Lock = threading.Lock()
 
-        self._recorded_track: npt.NDArray[DTYPE] = np.empty(
-            shape=(0, CHANNELS), dtype=DTYPE)
+        self._recorded_track = RecordedTrack()
 
     def start_stream(self) -> None:
         """Make a new thread, in which the stream will be active
@@ -193,7 +194,7 @@ class LoopStreamManager():
         """
         self._recording = True
 
-    def stop_recording(self) -> npt.NDArray[DTYPE]:
+    def stop_recording(self) -> RecordedTrack:
         """Set the _recording flag to False and prepare _recording_track for new recording.
 
         Returns:
@@ -201,10 +202,10 @@ class LoopStreamManager():
         """
         self._recording = False
         recorded_track = self._recorded_track
-        self._recorded_track = np.empty(shape=(0, CHANNELS), dtype=DTYPE)
+        self._recorded_track = RecordedTrack()
         return recorded_track
 
-    def update_tracks(self, tracks: list[npt.NDArray[DTYPE]]) -> None:
+    def update_tracks(self, tracks: list[PlayingTrack]) -> None:
         """Update its data in a thread safe manner using lock. First update the backup, 
         from which will the callback read while _tracks are being updated.
 
@@ -218,6 +219,19 @@ class LoopStreamManager():
     def main(self) -> None:
         """Open a sounddevice stream and keep it active while flag _stream_active is true.
         """
+        def slice_and_mix(indata: npt.NDArray[DTYPE], frames: int) -> npt.NDArray[DTYPE]:
+            if not self._tracks_lock.locked():
+                tracks = self._tracks
+            else:
+                tracks = self._tracks_copy
+
+            sliced_data = [indata]
+            for track in tracks:
+                sliced_data.append(track.slice(
+                    from_frame=self._current_frame, frames=frames))
+
+            mixed_data: npt.NDArray[DTYPE] = np.mean(a=sliced_data, axis=0)
+            return mixed_data
 
         def callback(indata: npt.NDArray[DTYPE], outdata: npt.NDArray[DTYPE],
                      frames: int, time: Any, status: sd.CallbackFlags) -> None:
@@ -236,30 +250,10 @@ class LoopStreamManager():
                 outdata.fill(0)
                 return
 
-            if not self._tracks_lock.locked():
-                tracks = self._tracks
-            else:
-                tracks = self._tracks_copy
-
             if self._recording:
-                self._recorded_track = np.concatenate(
-                    [self._recorded_track, indata])
+                self._recorded_track.append(data=indata)
 
-            sliced_data = [indata]
-            # slice
-            for track in tracks:
-                start = self._current_frame % len(track)
-                end = (self._current_frame+frames) % len(track)
-                if end < start:
-                    track_slice = np.concatenate(
-                        (track[start:], track[:end]))
-                else:
-                    track_slice = track[start:end]
-                sliced_data.append(track_slice)
-
-            mixed_data = np.mean(a=sliced_data, axis=0)
-
-            outdata[:] = mixed_data
+            outdata[:] = slice_and_mix(indata=indata, frames=frames)
 
             self._current_frame += frames
 
