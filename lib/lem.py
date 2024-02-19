@@ -26,15 +26,18 @@ class Lem():
     adding, removing and modifying individual tracks. 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, bpm: int) -> None:
         """Initialize a new instance of Lem (looper emulator).
+
+        Args:
+            bpm (int): Beats per minute. This class presumes that 0 < bpm < musically reasonable value (400).
         """
-
-        self._stream_manager: LoopStreamManager = LoopStreamManager()
-
+        self._stream_manager = LoopStreamManager()
         self._tracks: list[npt.NDArray[DTYPE]] = []
+        self._len_beat: int
+        self._metronome_volume = 1
 
-        self._metronome_volume = 1/8
+        self.initialize_stream(bpm=bpm)
 
     def initialize_stream(self, bpm: int) -> None:
         """Prepare the metronome, so the user can start to record tracks, and start a stream.
@@ -79,7 +82,7 @@ class Lem():
         sample, samplerate = sf.read(file=path, dtype=STR_DTYPE)
 
         desired_len = int((60*samplerate)/bpm)
-        self.len_beat = desired_len
+        self._len_beat = desired_len
 
         if len(sample) <= desired_len:
             # rounding desired_len introduces a slight distortion of bpm
@@ -118,13 +121,13 @@ class Lem():
             bool: True if the track was long at least one beat, thus it was actually added into tracks. 
             False if the rounding resulted in an empty track.
         """
-        remainder = len(recorded_track) % self.len_beat
+        remainder = len(recorded_track) % self._len_beat
 
-        if remainder > self.len_beat/2:
+        if remainder > self._len_beat/2:
             zeros = np.zeros(
-                shape=(self.len_beat-remainder, CHANNELS), dtype=DTYPE)
+                shape=(self._len_beat-remainder, CHANNELS), dtype=DTYPE)
             recorded_track = np.concatenate([recorded_track, zeros])
-        elif remainder <= self.len_beat/2:
+        elif remainder <= self._len_beat/2:
             recorded_track = recorded_track[:len(
                 recorded_track)-remainder]
 

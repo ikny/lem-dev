@@ -1,4 +1,5 @@
 import tkinter as tk
+from typing import Optional
 from gui_classes import *
 from lem import Lem, METRONOME_SAMPLE_PATH
 from soundfile import LibsndfileError
@@ -20,7 +21,7 @@ class LemApp(tk.Tk):
         """
         super().__init__(screenName, baseName, className, useTk, sync, use)
 
-        self.lem_state = Lem()
+        self.lem_state: Optional[Lem] = None
 
         # set GUI to darkmode
         self.tk_setPalette(background='#181818', foreground='#DDD78D')
@@ -37,21 +38,22 @@ class LemApp(tk.Tk):
         self.tracklist.pack(fill="both", expand=1)
 
         # TODO: set_bpm call is just a debug option
-        #self.set_bpm(123)
+        self.set_bpm(123)
 
         # start running
         self.mainloop()
 
     def set_bpm(self, bpm: int) -> None:
-        """Calls the initialization method of Lem. If everything succeeds, prepares the GUI for the actual recording flow. 
+        """Tries to initialize the logic (Lem). If everything succeeds, prepares the GUI for the actual recording flow. 
 
         Args:
             bpm (int): The value the user has entered into BpmPopup.
         """
         try:
-            self.lem_state.initialize_stream(bpm=bpm)
+            self.lem_state = Lem(bpm=bpm)
         except LibsndfileError:
-            self.show_err(message=f"""The file on specified path could not be opened. \nPlease check that path "{METRONOME_SAMPLE_PATH}" contains valid audio file.""")
+            self.show_err(
+                message=f"""The file on specified path could not be opened. \nPlease check that path "{METRONOME_SAMPLE_PATH}" contains valid audio file.""")
             return
         except Exception as e:
             self.show_err(f"An unexpected error occured: \n{e}")
@@ -61,25 +63,41 @@ class LemApp(tk.Tk):
         self.record_button["state"] = "normal"
 
     def show_err(self, message: str) -> None:
+        """Build an error popup with a message.
+
+        Args:
+            message (str): The message to be shown to the user.
+        """
         ErrorPopup(master=self, message=message)
 
     def destroy(self) -> None:
         """A method to be called when the user closes the app's main window. Ensures the state has terminated.
         """
-        self.lem_state.terminate()
+        if self.lem_state:
+            self.lem_state.terminate()
         return super().destroy()
+
+    """ The following methods are here because various GUI elements use them. """
 
     def on_start_recording(self) -> None:
         """A method to be passed as a callback to the RecordButton. Delegates the action to its state object.
         """
-        self.lem_state.start_recording()
+        self.lem_state.start_recording()  # type: ignore
 
     def on_stop_recording(self) -> None:
         """A method to be passed as a callback to the RecordButton.
         Adds track in the GUI only if the track was added in the logic (see Lem.post_production for more details).
         """
-        if self.lem_state.stop_recording():
+        if self.lem_state.stop_recording():  # type: ignore
             self.tracklist.add_track()
+
+    def delete_track(self, idx: int) -> None:
+        """Delegates the track deletion to the state.
+
+        Args:
+            idx (int): The index of the track which is being deleted.
+        """
+        self.lem_state.delete_track(idx=idx)  # type: ignore
 
 
 if __name__ == "__main__":

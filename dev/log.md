@@ -941,3 +941,55 @@ For the ending beat, this should be fairly easy (`stop_recording()` sets flag `s
 For the starting beat this means to have some sort of buffer containing the past input from the last beat until now. This could be circular buffer, being rewrited every beat ("on beat" is on idx zero). When `start_recording()` happens, \[0:now] (that is \[last_beat:now]) of this buffer is taken as a base for `recorded_track`. 
 
 How to determine "now"? `current_frame % len_beat` should work.
+
+## 13.2.
+Currently I am deciding whether it is okay to round the length of a recorded track to whole callback lengths instead of whole frames. It is certain that rounding to whole frames is precise enough, but would callback length sound weird? 
+
+One callback length is 100 frames. Sampling frequency 44100 fps means 2646000 frames per minute. If we set the maximum available BPM (400), there will be 6615 frames per beat. 100/6615 = 0.015..., so the error is 1.5 % BPM. That is low enough for me to try to dismiss it.
+
+I am starting to think that I should take a radically different approach to my callback, perhaps implementing queue would nice things up.
+
+### Testing
+When I was testing, a really weird thing happened: when I connect the plug for headphones and mic as "headphones with microphone", the metronomes sound gets reverbed or something like this. The same thing happened on the school PCs. However, I am convinced it did not happen when I was testing the last time.
+
+Apparently, it has to do something with the weird ALSA behaviour... I hope I still have the paper with the table somewhere... I do not, whoops...
+
+So, this weird bug happens also in Audacity and with Alsa... achjoooo. This seems to be a problem connected to either PulseAudio or ALSA. Other programs mentioned when searching for the solution were pavucontrol and jack.
+
+But, after a while, I was able to get my computer to recognize the mic input. Further testing revealed that only the last beat is actually played in a loop afterwards.
+
+I have figured out why, fixed it and got another err:
+`TypeError: only integer scalar arrays can be converted to a scalar index`
+
+## 14.2.
+Idk what happened, I do not get the err today. K. Anyways, the recording seems to end late or repeat the last two beats... idk man. Lets make it theoretically correct and then test.
+
+Well. Now I see the consequences of tired coding. Nothing actually works the way it should, and all the system is just one big mess. Time to think it through _again_.
+
+## 17.2.
+Last days I am really confronted with the situation when I do not have control/good overview of my code and what I am doing. The universe revealed to me that if I was writing code modularly, like lego bricks, then this would not happen: I could only change one brick/one brick structure at a time. Another thing is keeping the bricks small and simple enough, so that each time something needs rebuilding, I can keep a good idea of what I am doing. This requires a lot of levels of abstraction, similarly to a pyramid.
+
+However, this approach requires to build all the basic bricks cleanly, so the higher levels do not collapse. The more general is the low-level brick supposed to be, the more error resistant/precisely defined it has to be.
+
+Moreover, when one follows this brick approach, it is meaningful to write tests for every brick.
+
+---
+Made some structural changes: track classes are now in a separate files, which caused the need to move constants to a separate file. I will also move the `Queue` to some sort of `utils` or so.
+
+## 18.2.
+Make `time`, which would count frames and beats??? This could make everything really pretty.
+I fight some nasty things rn: for every class used in audio it would make sense to know how long one beat is. But to do that, I would have to pass it everywhere, which is repetitive and I do not like it. Instead, I would like to initialize a `MusicalTime` ?object? when I get the BPM. Afterwards, this object could provide:
+- methods to add, substract and get the time and its parts, (`time to next beat` method?)
+- a timer object, which would implement just those same methods,
+
+I need to initialize the class/module/something, so that every time object afterwards has the same property: len_beat, which it gets from the initializer...
+
+### Late initialization in python
+have been reading etc., will probably use `Optional[Type]` for initialization of BPM. This way, **the whole state** will be initialized with <ins>fixed bpm</ins>. Which will save me from a lot of headache in the development.
+
+So now I will try to let the GUI and most of `main` exist, and just rebuild `lem` so that late initialization happens only at the top-most level.
+
+## 19.2.
+Funny. I just realized that because it was necessary to implement three more flags, I wanted to create a new data structure for them. Then I saw other opportunities, which seemed connected to the first one, so I made two more classes. But they seemed illogical to me, so I rebuilt the whole system of frames/musical time. And suddenly, here I am, stuck on implementation details of this new `MusicalTime` and `RecordedTrack` classes, which do not even matter for the functionality, only for the cleaniness of the project.
+
+Made backup of current state and reverted most of the made changes. Lets try to start again.
