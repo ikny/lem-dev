@@ -10,6 +10,7 @@ from time import sleep
 # parts of project
 from constants import *
 from tracks import RecordedTrack, PlayingTrack
+from custom_exceptions import InvalidSamplerateError
 
 
 class Lem():
@@ -25,69 +26,42 @@ class Lem():
         Args:
             bpm (int): Beats per minute. This class presumes that 0 < bpm < musically reasonable value (400).
         """
+        # rounding to int introduces a slight distortion of bpm
+        self._len_beat = int(60*SAMPLERATE/bpm)
         self._stream_manager = LoopStreamManager()
         self._tracks: list[PlayingTrack] = []
-        self._len_beat: int
-        self._metronome_volume = 1
 
-        self.initialize_stream(bpm=bpm)
-
-    def initialize_stream(self, bpm: int) -> None:
-        """Prepare the metronome, so the user can start to record tracks, and start a stream.
-
-        Args:
-            bpm (int): The number of metronome beats per minute.
-
-        Returns:
-            bool: True if both the metronome and the stream were initialized successfully. 
-            False if an error was encountered when opening/reading the sample or starting a stream.
-        """
-        metronome = self.metronome_generator(
-            bpm=bpm, path=METRONOME_SAMPLE_PATH)
-
-        self._tracks.append(PlayingTrack(data=metronome))
-        self._update_tracks()
-
+        self.initialize_metronome()
         self._stream_manager.start_stream()
+
+    def initialize_metronome(self) -> None:
+        """Prepare the metronome so that the sample is long exactly one beat of the set BPM.
+
+        Raises:
+            InvalidSamplerateError: If the samplerate of the audio file on path is not the same as SAMPLERATE.
+            soundfile.LibsndfileError: If the file on path could not be opened.
+            TypeError: If the dtype could not be recognized.
+            ZeroDivisionError: If bpm = 0.
+        """
+        sample: npt.NDArray[DTYPE]
+        sample, samplerate = sf.read(
+            file=METRONOME_SAMPLE_PATH, dtype=STR_DTYPE)
+        if samplerate != SAMPLERATE:
+            raise InvalidSamplerateError()
+
+        if len(sample) <= self._len_beat:
+            sample = np.concatenate(
+                (sample, np.zeros(shape=(self._len_beat-len(sample), CHANNELS), dtype=DTYPE)))
+        else:
+            sample = sample[:self._len_beat]
+
+        self._tracks.append(PlayingTrack(data=sample))
+        self._update_tracks()
 
     def terminate(self) -> None:
         """Delegate the closing of the stream to stream manager.
         """
         self._stream_manager.end_stream()
-
-    def metronome_generator(self, bpm: int, path: str) -> npt.NDArray[DTYPE]:
-        """Cut or fill the metronome sample so that it is long exactly one beat of the given BPM.
-
-        Args:
-            bpm (int): The desired tempo.
-            path (str): Path to the metronome sample.
-
-        Returns:
-            npt.NDArray[DTYPE]: The resulting metronome sample long exactly one beat of the given BPM.
-
-        Raises:
-            soundfile.LibsndfileError: If the file on path could not be opened.
-            TypeError: If the dtype could not be recognized.
-            ZeroDivisionError: If bpm = 0.
-        """
-
-        sample: npt.NDArray[DTYPE]
-        sample, samplerate = sf.read(file=path, dtype=STR_DTYPE)
-
-        desired_len = int((60*samplerate)/bpm)
-        self._len_beat = desired_len
-
-        if len(sample) <= desired_len:
-            # rounding desired_len introduces a slight distortion of bpm
-            sample = np.concatenate(
-                (sample, np.zeros(shape=(desired_len-len(sample), CHANNELS), dtype=DTYPE)))
-        else:
-            sample = sample[:desired_len]
-
-        # adjust volume
-        sample = (sample*self._metronome_volume).astype(dtype=DTYPE)
-
-        return sample
 
     def start_recording(self) -> None:
         """Delegate the start to its stream manager.
@@ -99,7 +73,7 @@ class Lem():
         This returns the new track, which is then passed to post production method.
 
         Returns:
-            bool: Passes the value returned by the post_production method
+            bool: Passes the value returned by the post_production method.
         """
         recorded_track = self._stream_manager.stop_recording()
         return self.post_production(recorded_track=recorded_track)
@@ -161,6 +135,7 @@ class LoopStreamManager():
         # flags
         self._recording = False
         self._stream_active = True
+
         self._current_frame = 0
 
         self._stream_thread: threading.Thread
@@ -246,6 +221,7 @@ class LoopStreamManager():
                 time (Any): A timestamp of the capture of the first indata frame.
                 status (sd.CallbackFlags): CallbackFlags object, indicating whether input/output under/overflow is happening.
             """
+            # handle errs
             if status.output_underflow:
                 outdata.fill(0)
                 return

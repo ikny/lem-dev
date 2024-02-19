@@ -1,0 +1,2 @@
+class InvalidSamplerateError(Exception):
+    pass

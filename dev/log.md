@@ -993,3 +993,6 @@ So now I will try to let the GUI and most of `main` exist, and just rebuild `lem
 Funny. I just realized that because it was necessary to implement three more flags, I wanted to create a new data structure for them. Then I saw other opportunities, which seemed connected to the first one, so I made two more classes. But they seemed illogical to me, so I rebuilt the whole system of frames/musical time. And suddenly, here I am, stuck on implementation details of this new `MusicalTime` and `RecordedTrack` classes, which do not even matter for the functionality, only for the cleaniness of the project.
 
 Made backup of current state and reverted most of the made changes. Lets try to start again.
+
+Currently it seems great! I make one change at a time, test it, commit it, and now I am almost where I need to be!
+
