@@ -11,7 +11,7 @@ from time import sleep
 from constants import *
 from tracks import RecordedTrack, PlayingTrack
 from custom_exceptions import InvalidSamplerateError
-from utils import Queue, CircularBuffer, UserRecordingEvents
+from utils import Queue, AudioCircularBuffer, UserRecordingEvents
 
 
 class Lem():
@@ -127,7 +127,7 @@ class LoopStreamManager():
         self._tracks_copy: list[PlayingTrack] = self._tracks
         self._tracks_lock: threading.Lock = threading.Lock()
 
-        self._last_beat = CircularBuffer(
+        self._last_beat = AudioCircularBuffer(
             length=self._len_beat, channels=CHANNELS, dtype=DTYPE)
         self._recorded_track = RecordedTrack()
         self._recorded_tracks_queue = Queue()

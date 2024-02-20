@@ -1006,4 +1006,4 @@ Test one: what will happen if the post prod gets a track not long in beats? This
     - do not append the overflowing samples in the callback
     - solve why the overflow was higher than 100
 
-Test two: how does the ovevrflow happen?
+I have rewritten a lot of things, some started to make sense... Now I will go home and start testing.
