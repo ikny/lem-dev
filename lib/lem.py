@@ -11,7 +11,7 @@ from time import sleep
 from constants import *
 from tracks import RecordedTrack, PlayingTrack
 from custom_exceptions import InvalidSamplerateError
-from utils import Queue, CircularBuffer
+from utils import Queue, CircularBuffer, UserRecordingEvents
 
 
 class Lem():
@@ -158,17 +158,14 @@ class LoopStreamManager():
         """
         if len_beat < 0:
             raise ValueError("len_beat must not be negative")
-
         self._len_beat = len_beat
+        self._current_frame = 0
 
-        # flags
         self._stream_active = True
 
-        self._start_recording = False
         self._recording = False
-        self._stop_recording = False
-
-        self._current_frame = 0
+        self._stopping_recording = False
+        self._event_queue = Queue()
 
         # audio data
         self._stream_thread: threading.Thread
@@ -201,7 +198,7 @@ class LoopStreamManager():
         """Set the _recording flag to True. This works because 
         the callback method checks the flag when deciding whether to store indata.
         """
-        self._start_recording = True
+        self._event_queue.push(UserRecordingEvents.START)
 
     def stop_recording(self) -> RecordedTrack:
         # TODO: check all the documentation for correct types
@@ -211,7 +208,7 @@ class LoopStreamManager():
         Returns:
             npt.NDArray[DTYPE]: The recorded track.
         """
-        self._stop_recording = True
+        self._event_queue.push(UserRecordingEvents.STOP)
         while True:
             try:
                 recorded_track: RecordedTrack = self._recorded_tracks_queue.pop()
@@ -261,43 +258,27 @@ class LoopStreamManager():
                 time (Any): A timestamp of the capture of the first indata frame.
                 status (sd.CallbackFlags): CallbackFlags object, indicating whether input/output under/overflow is happening.
             """
-            # TODO: get status first and execute afterwards #unbreakable
-            # TODO: multiple start/stop action in one beat will break this
-
             # handle errs
             if status.output_underflow:
                 outdata.fill(0)
                 return
 
-            # Determine whether this callback is on beat, because recording can end only on beat.
-            on_beat = self.on_beat()
-
-            self._last_beat.write(data=indata)
-
-            if self._start_recording:
-                # initialize recording
-                self._recorded_track.first_frame_time = self._current_frame - \
-                    self._last_beat.position()
-                self._recorded_track.start_rec_time = self._current_frame
-                self._recorded_track.append(
-                    data=self._last_beat.start_to_index())
-                self._start_recording = False
-                self._recording = True
+            # These events change the state
+            if not self._event_queue.empty():
+                event = self._event_queue.pop()
+                if event == UserRecordingEvents.START:
+                    self._initialize_recording()
+                elif event == UserRecordingEvents.STOP:
+                    # note when the stop_recording came
+                    self._recorded_track.stop_rec_time = self._current_frame
 
             if self._recording:
                 self._recorded_track.append(data=indata)
+            if self._stopping_recording and self.on_beat():
+                self._finish_recording()
 
-            if self._stop_recording and not self._recorded_track.stop_rec_time:
-                # note when the stop_recording came
-                self._recorded_track.stop_rec_time = self._current_frame
-
-            if self._stop_recording and on_beat:
-                # finish the recording and prepare for new one
-                self._recorded_tracks_queue.push(item=self._recorded_track)
-                self._recorded_track = RecordedTrack()
-                self._recording = False
-                self._stop_recording = False
-
+            # this happens every callback
+            self._last_beat.write(data=indata)
             outdata[:] = slice_and_mix(indata=indata, frames=frames)
             self._current_frame += frames
 
@@ -310,8 +291,29 @@ class LoopStreamManager():
 
         Returns:
             bool: True if beat happens, False if it does not.
-        """        
+        """
         position_in_beat = self._current_frame % self._len_beat
         if position_in_beat+BLOCKSIZE >= self._len_beat:
             return True
         return False
+
+    def _initialize_recording(self) -> None:
+        if self._stopping_recording:
+            # override the old one
+            self._prepare_new_recording()
+        # initialize recording
+        self._recorded_track.first_frame_time = self._current_frame-self._last_beat.position()
+        self._recorded_track.start_rec_time = self._current_frame
+        self._recorded_track.append(
+            data=self._last_beat.start_to_index())
+        self._recording = True
+
+    def _finish_recording(self) -> None:
+        # finish the recording and prepare for new one
+        self._recorded_tracks_queue.push(item=self._recorded_track)
+        self._prepare_new_recording()
+
+    def _prepare_new_recording(self) -> None:
+        self._recorded_track = RecordedTrack()
+        self._recording = False
+        self._stopping_recording = False

@@ -3,6 +3,8 @@ from typing import Any
 import numpy.typing as npt
 import numpy as np
 
+from enum import Enum
+
 
 class Queue():
     """A simple queue that can only push and pop.
@@ -16,6 +18,9 @@ class Queue():
 
     def pop(self) -> Any:
         return self._items.pop(0)
+
+    def empty(self) -> bool:
+        return bool(self._items)
 
 
 class CircularBuffer():
@@ -42,6 +47,11 @@ class CircularBuffer():
 
     def start_to_index(self) -> npt.NDArray:  # type: ignore
         return self._data[:self._index]
-    
+
     def position(self) -> int:
         return self._index
+
+
+class UserRecordingEvents(Enum):
+    START = 1
+    STOP = 2
