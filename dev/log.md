@@ -996,3 +996,14 @@ Made backup of current state and reverted most of the made changes. Lets try to 
 
 Currently it seems great! I make one change at a time, test it, commit it, and now I am almost where I need to be!
 
+## 20.2.
+Plan for today: tests for yesterdays' features, and hopefully bugfixes.
+
+Test one: what will happen if the post prod gets a track not long in beats? This could explain more bugs, but it probably wont explain why the track offset does not work.
+- often it will result in short (few callbacks long) tracks
+- -> fixed rounding of first with start
+- -> the callback should include *beats*, not samples over a beat.
+    - do not append the overflowing samples in the callback
+    - solve why the overflow was higher than 100
+
+Test two: how does the ovevrflow happen?

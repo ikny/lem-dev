@@ -89,19 +89,42 @@ class Lem():
             bool: True if the track was long at least one beat, thus it was actually added into tracks. 
             False if the rounding resulted in an empty track.
         """
+        # TODO: solve this typing mess
+        first: int = recorded_track.first_frame_time  # type: ignore
+        start: int = recorded_track.start_rec_time  # type: ignore
+        stop: int = recorded_track.stop_rec_time  # type: ignore
         data = recorded_track.data
-        remainder = len(data) % self._len_beat
+        length = len(data)
 
-        if remainder > self._len_beat/2:
-            zeros = np.zeros(
-                shape=(self._len_beat-remainder, CHANNELS), dtype=DTYPE)
-            data = np.concatenate([data, zeros])
-        elif remainder <= self._len_beat/2:
-            data = data[:len(
-                data)-remainder]
+        half_beat = int(self._len_beat/2)
+
+        print(f"beat, halfbeat: {self._len_beat, half_beat}")
+        print(f"first: {first}")
+        print(f"start: {start}")
+        print(f"stop: {stop}")
+        print(f"length: {length}")
+
+        # TODO: the data were not long in beats (lb: 48109, ld: 48282)
+        if start - first < half_beat:
+            start = 0
+        else:
+            start = self._len_beat
+            first += self._len_beat
+        print(f"rounded start: {start}")
+
+        if (stop - first) % self._len_beat < half_beat:
+            stop = length - self._len_beat
+        else:
+            stop = length
+        print(f"rounded stop: {stop}")
+
+        data = data[start:stop]
+        print(f"rounded data len: {len(data)}")
 
         if len(data):
-            self._tracks.append(PlayingTrack(data=data))
+            print(f"first again: {first}")
+            self._tracks.append(PlayingTrack(
+                data=data, playing_from_frame=first))
             self._update_tracks()
             return True
         return False
@@ -239,23 +262,25 @@ class LoopStreamManager():
                 status (sd.CallbackFlags): CallbackFlags object, indicating whether input/output under/overflow is happening.
             """
             # TODO: get status first and execute afterwards #unbreakable
+            # TODO: multiple start/stop action in one beat will break this
+
             # handle errs
             if status.output_underflow:
                 outdata.fill(0)
                 return
-            
-            # Determine, whether this callback is on beat, because recording can end only on beat.
-            on_beat = False
-            position_in_beat = self._current_frame % self._len_beat
-            if position_in_beat+frames >= self._len_beat:
-                on_beat = True
+
+            # Determine whether this callback is on beat, because recording can end only on beat.
+            on_beat = self.on_beat()
 
             self._last_beat.write(data=indata)
 
             if self._start_recording:
-                self._recorded_track.first_frame_time = self._current_frame - self._last_beat.position()
+                # initialize recording
+                self._recorded_track.first_frame_time = self._current_frame - \
+                    self._last_beat.position()
                 self._recorded_track.start_rec_time = self._current_frame
-                self._recorded_track.append(data=self._last_beat.start_to_index())
+                self._recorded_track.append(
+                    data=self._last_beat.start_to_index())
                 self._start_recording = False
                 self._recording = True
 
@@ -263,18 +288,30 @@ class LoopStreamManager():
                 self._recorded_track.append(data=indata)
 
             if self._stop_recording and not self._recorded_track.stop_rec_time:
+                # note when the stop_recording came
                 self._recorded_track.stop_rec_time = self._current_frame
 
             if self._stop_recording and on_beat:
+                # finish the recording and prepare for new one
                 self._recorded_tracks_queue.push(item=self._recorded_track)
                 self._recorded_track = RecordedTrack()
                 self._recording = False
                 self._stop_recording = False
 
             outdata[:] = slice_and_mix(indata=indata, frames=frames)
-
             self._current_frame += frames
 
         with sd.Stream(samplerate=SAMPLERATE, blocksize=BLOCKSIZE, dtype=STR_DTYPE, channels=CHANNELS, callback=callback):
             while self._stream_active:
                 sleep(1)
+
+    def on_beat(self) -> bool:
+        """Determine whether beat will happen in next BLOCKSIZE frames.
+
+        Returns:
+            bool: True if beat happens, False if it does not.
+        """        
+        position_in_beat = self._current_frame % self._len_beat
+        if position_in_beat+BLOCKSIZE >= self._len_beat:
+            return True
+        return False
