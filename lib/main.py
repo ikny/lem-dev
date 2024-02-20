@@ -1,5 +1,6 @@
-# types
+# types/dev
 from typing import Optional
+import logging
 # libs
 import tkinter as tk
 from soundfile import LibsndfileError
@@ -8,6 +9,11 @@ from gui_classes import *
 from lem import Lem
 from constants import METRONOME_SAMPLE_PATH, SAMPLERATE
 from custom_exceptions import InvalidSamplerateError
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format="%(levelname)s: %(asctime)s %(name)s: %(message)s", level=logging.DEBUG)
 
 
 class LemApp(tk.Tk):
@@ -43,7 +49,7 @@ class LemApp(tk.Tk):
         self.tracklist.pack(fill="both", expand=1)
 
         # TODO: set_bpm call is just a debug option
-        self.set_bpm(123)
+        # self.set_bpm(123)
 
         # start running
         self.mainloop()

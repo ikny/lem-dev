@@ -1,6 +1,7 @@
-# types
+# types/dev
 from typing import Any, Optional
 import numpy.typing as npt
+import logging
 # libs
 import sounddevice as sd
 import numpy as np
@@ -12,6 +13,11 @@ from constants import *
 from tracks import RecordedTrack, PlayingTrack
 from custom_exceptions import InvalidSamplerateError
 from utils import Queue, AudioCircularBuffer, UserRecordingEvents
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format="%(levelname)s: %(asctime)s %(name)s: %(message)s", level=logging.DEBUG)
 
 
 class Lem():
@@ -172,6 +178,8 @@ class LoopStreamManager():
             npt.NDArray[DTYPE]: The recorded track.
         """
         self._event_queue.push(UserRecordingEvents.STOP)
+        logger.debug("STOP event pushed to queue!")
+
         # TODO: async wait is probably supposed to be used here
         while True:
             if not self._recorded_tracks_queue.empty():
@@ -195,36 +203,26 @@ class LoopStreamManager():
         first: int = recorded_track.first_frame_time  # type: ignore
         start: int = recorded_track.start_rec_time  # type: ignore
         stop: int = recorded_track.stop_rec_time  # type: ignore
-        data = recorded_track.data
+        data = recorded_track.data[:len(
+            recorded_track.data)-len(recorded_track.data) % self._len_beat]
         length = len(data)
 
         half_beat = int(self._len_beat/2)
 
-        print(f"beat, halfbeat: {self._len_beat, half_beat}")
-        print(f"first: {first}")
-        print(f"start: {start}")
-        print(f"stop: {stop}")
-        print(f"length: {length}")
-
-        # TODO: the data were not long in beats (lb: 48109, ld: 48282)
         if start - first < half_beat:
             start = 0
         else:
             start = self._len_beat
             first += self._len_beat
-        print(f"rounded start: {start}")
 
         if (stop - first) % self._len_beat < half_beat:
             stop = length - self._len_beat
         else:
             stop = length
-        print(f"rounded stop: {stop}")
 
         data = data[start:stop]
-        print(f"rounded data len: {len(data)}")
 
         if len(data):
-            print(f"first again: {first}")
             return PlayingTrack(
                 data=data, playing_from_frame=first)
         return None
@@ -272,12 +270,15 @@ class LoopStreamManager():
                 if event == UserRecordingEvents.START:
                     self._initialize_recording()
                 elif event == UserRecordingEvents.STOP:
+                    logger.debug("Stopping the recording in the callback!")
                     # note when the stop_recording came
                     self._recorded_track.stop_rec_time = self._current_frame
+                    self._stopping_recording = True
 
             if self._recording:
                 self._recorded_track.append(data=indata)
             if self._stopping_recording and self.on_beat():
+                logger.debug("Finishing the recording in the callback!")
                 self._finish_recording()
 
             # this happens every callback
@@ -314,6 +315,7 @@ class LoopStreamManager():
     def _finish_recording(self) -> None:
         # finish the recording and prepare for new one
         self._recorded_tracks_queue.push(item=self._recorded_track)
+        logger.debug("The recorded track was pushed to the queue!")
         self._prepare_new_recording()
 
     def _prepare_new_recording(self) -> None:

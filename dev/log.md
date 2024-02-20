@@ -1007,3 +1007,6 @@ Test one: what will happen if the post prod gets a track not long in beats? This
     - solve why the overflow was higher than 100
 
 I have rewritten a lot of things, some started to make sense... Now I will go home and start testing.
+
+
+It wrrrks!!!! bot after recording for too long it seems that the memory is giving up lol.... or idk, I just get alsa error, the same as before.
