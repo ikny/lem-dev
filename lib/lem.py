@@ -122,7 +122,7 @@ class LoopStreamManager():
         self._event_queue = Queue()
 
         # audio data
-        self._stream_thread: threading.Thread
+        self._stream_thread: Optional[threading.Thread] = None
         self._tracks: list[PlayingTrack] = []
         self._tracks_copy: list[PlayingTrack] = self._tracks
         self._tracks_lock: threading.Lock = threading.Lock()
@@ -140,13 +140,11 @@ class LoopStreamManager():
 
     def end_stream(self) -> None:
         """Set stream_active to false and wait for the stream thread to end. 
-        If the stream was not initialized yet, there is no waiting.
+        If the stream was not initialized yet, finishes without further action.
         """
         self._stream_active = False
-        try:
+        if self._stream_thread:
             self._stream_thread.join()
-        except AttributeError:
-            return
 
     def update_tracks(self, tracks: list[PlayingTrack]) -> None:
         """Update its data in a thread safe manner using lock. First update the backup, 
@@ -230,6 +228,8 @@ class LoopStreamManager():
             return PlayingTrack(
                 data=data, playing_from_frame=first)
         return None
+
+    """ The following methods are used in a separate thread. """
 
     def main(self) -> None:
         """Open a sounddevice stream and keep it active while flag _stream_active is true.
