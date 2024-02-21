@@ -1,6 +1,8 @@
-import tkinter as tk
+# types
 from typing import Any, Callable
-
+# libs
+import tkinter as tk
+# parts of project
 from main import LemApp
 
 

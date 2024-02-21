@@ -3,8 +3,14 @@ from typing import Optional
 import numpy.typing as npt
 # libs
 import numpy as np
+import logging
 # other parts of this project
 from constants import *
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format="%(levelname)s: %(asctime)s %(name)s: %(message)s", level=logging.DEBUG)
 
 
 class Track():

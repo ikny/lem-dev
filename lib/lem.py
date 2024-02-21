@@ -39,7 +39,7 @@ class Lem():
         self._tracks: list[PlayingTrack] = []
 
         self.initialize_metronome()
-        self._stream_manager.start_stream()
+        self.start_stream()
 
     def initialize_metronome(self) -> None:
         """Prepare the metronome so that the sample is long exactly one beat of the set BPM.
@@ -65,6 +65,11 @@ class Lem():
         self._tracks.append(PlayingTrack(data=sample))
         self._update_tracks()
 
+    def start_stream(self) -> None:
+        """Delegate the start to the stream manager.
+        """
+        self._stream_manager.start_stream()
+
     def terminate(self) -> None:
         """Delegate the closing of the stream to stream manager.
         """
@@ -85,6 +90,7 @@ class Lem():
         recorded_track = self._stream_manager.stop_recording()
         if not recorded_track:
             return False
+        logger.debug("We have a new track! Updating the tracks...")
         self._tracks.append(recorded_track)
         self._update_tracks()
         return True
@@ -167,10 +173,11 @@ class LoopStreamManager():
         """Set the _recording flag to True. This works because 
         the callback method checks the flag when deciding whether to store indata.
         """
+        logger.debug("START event pushed to queue.")
         self._event_queue.push(UserRecordingEvents.START)
 
     def stop_recording(self) -> Optional[PlayingTrack]:
-        # TODO: check all the documentation for correct types
+        # TODO: check all the documentation for correct types and info
         """Sets the _recording flag to False. 
         Waits until the recording stops and afterwards prepares _recording_track for new recording.
 
@@ -178,13 +185,15 @@ class LoopStreamManager():
             npt.NDArray[DTYPE]: The recorded track.
         """
         self._event_queue.push(UserRecordingEvents.STOP)
-        logger.debug("STOP event pushed to queue!")
+        logger.debug("STOP event pushed to queue.")
 
         while True:
             if not self._recorded_tracks_queue.empty():
                 break
             sleep(0.001)
         raw_track: RecordedTrack = self._recorded_tracks_queue.pop()
+        logger.debug(
+            "Passing the recorded track to the post_production team...")
         recorded_track = self.post_production(raw_track)
         return recorded_track
 
@@ -199,6 +208,11 @@ class LoopStreamManager():
             False if the rounding resulted in an empty track.
         """
         if not recorded_track.is_complete():
+            logger.error(f"""Recorded track is not complete: 
+                         first is {recorded_track.first_frame_time},
+                         start is {recorded_track.start_rec_time},
+                         stop is {recorded_track.stop_rec_time},
+                         data is {recorded_track.data}.""")
             raise IncompleteRecordedTrackError(
                 "RecordedTrack must be complete to be modified in post_production! See RecordedTrack.is_complete().")
 
@@ -227,8 +241,10 @@ class LoopStreamManager():
         data = data[start:stop]
 
         if len(data):
+            logger.debug("The track was rounded successfully.")
             return PlayingTrack(
                 data=data, playing_from_frame=first)
+        logger.debug("The resulting track had length zero.")
         return None
 
     """ The following methods are used in a separate thread. """
@@ -272,8 +288,10 @@ class LoopStreamManager():
             if not self._event_queue.empty():
                 event = self._event_queue.pop()
                 if event == UserRecordingEvents.START:
+                    logger.debug("User started the recording.")
                     self._initialize_recording()
                 elif event == UserRecordingEvents.STOP:
+                    logger.debug("User stopped the recording.")
                     self._stop_recording()
 
             if self._recording:
@@ -291,8 +309,11 @@ class LoopStreamManager():
                 sleep(1)
 
     def _initialize_recording(self) -> None:
+        logger.debug("Initializing recording.")
         if self._stopping_recording:
-            # override the old one
+            # overwrite the old one
+            logger.debug(
+                "Still recording: overwriting the unfinished recording.")
             self._prepare_new_recording()
         # initialize recording
         self._recorded_track.first_frame_time = self._current_frame-self._last_beat.position()
@@ -302,23 +323,27 @@ class LoopStreamManager():
         self._recording = True
 
     def _stop_recording(self) -> None:
-        logger.debug("Stopping the recording in the callback!")
+        logger.debug("Stopping the recording.")
         # note when the stop_recording came
         self._recorded_track.stop_rec_time = self._current_frame
 
         if is_in_first_half_of_beat(current_frame=self._current_frame, len_beat=self._len_beat):
+            logger.debug(
+                "The user's stop came in the first half of beat, finishing immediately.")
             self._finish_recording()
         else:
+            logger.debug(
+                "The user's stop came in the second half of a beat, waiting until the end.")
             self._stopping_recording = True
 
     def _finish_recording(self) -> None:
         # finish the recording and prepare for new one
-        logger.debug("Finishing the recording in the callback!")
+        logger.debug("Finishing the recording.")
         self._recorded_tracks_queue.push(item=self._recorded_track)
-        logger.debug("The recorded track was pushed to the queue!")
         self._prepare_new_recording()
 
     def _prepare_new_recording(self) -> None:
+        logger.debug("Preparing for new recording.")
         self._recorded_track = RecordedTrack()
         self._recording = False
         self._stopping_recording = False
