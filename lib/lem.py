@@ -12,7 +12,7 @@ from time import sleep
 from constants import *
 from tracks import RecordedTrack, PlayingTrack
 from custom_exceptions import InvalidSamplerateError
-from utils import Queue, AudioCircularBuffer, UserRecordingEvents
+from utils import Queue, AudioCircularBuffer, UserRecordingEvents, on_beat, is_in_first_half_of_beat
 
 
 logger = logging.getLogger(__name__)
@@ -216,7 +216,10 @@ class LoopStreamManager():
             first += self._len_beat
 
         if (stop - first) % self._len_beat < half_beat:
-            stop = length - self._len_beat
+            if stop > length:
+                stop = length
+            else:
+                stop = length - self._len_beat
         else:
             stop = length
 
@@ -270,15 +273,11 @@ class LoopStreamManager():
                 if event == UserRecordingEvents.START:
                     self._initialize_recording()
                 elif event == UserRecordingEvents.STOP:
-                    logger.debug("Stopping the recording in the callback!")
-                    # note when the stop_recording came
-                    self._recorded_track.stop_rec_time = self._current_frame
-                    self._stopping_recording = True
+                    self._stop_recording()
 
             if self._recording:
                 self._recorded_track.append(data=indata)
-            if self._stopping_recording and self.on_beat():
-                logger.debug("Finishing the recording in the callback!")
+            if self._stopping_recording and on_beat(current_frame=self._current_frame, len_beat=self._len_beat, frames=frames):
                 self._finish_recording()
 
             # this happens every callback
@@ -289,17 +288,6 @@ class LoopStreamManager():
         with sd.Stream(samplerate=SAMPLERATE, blocksize=BLOCKSIZE, dtype=STR_DTYPE, channels=CHANNELS, callback=callback):
             while self._stream_active:
                 sleep(1)
-
-    def on_beat(self) -> bool:
-        """Determine whether beat will happen in next BLOCKSIZE frames.
-
-        Returns:
-            bool: True if beat happens, False if it does not.
-        """
-        position_in_beat = self._current_frame % self._len_beat
-        if position_in_beat+BLOCKSIZE >= self._len_beat:
-            return True
-        return False
 
     def _initialize_recording(self) -> None:
         if self._stopping_recording:
@@ -312,8 +300,19 @@ class LoopStreamManager():
             data=self._last_beat.start_to_index())
         self._recording = True
 
+    def _stop_recording(self) -> None:
+        logger.debug("Stopping the recording in the callback!")
+        # note when the stop_recording came
+        self._recorded_track.stop_rec_time = self._current_frame
+
+        if is_in_first_half_of_beat(current_frame=self._current_frame, len_beat=self._len_beat):
+            self._finish_recording()
+        else:
+            self._stopping_recording = True
+
     def _finish_recording(self) -> None:
         # finish the recording and prepare for new one
+        logger.debug("Finishing the recording in the callback!")
         self._recorded_tracks_queue.push(item=self._recorded_track)
         logger.debug("The recorded track was pushed to the queue!")
         self._prepare_new_recording()

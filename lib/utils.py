@@ -105,3 +105,32 @@ class UserRecordingEvents(Enum):
     """
     START = 1
     STOP = 2
+
+
+def on_beat(current_frame: int, len_beat: int, frames: int) -> bool:
+    """Determine whether beat will happen in next frames.
+    Returns:
+        bool: True if beat happens, False if it does not.
+    """
+    position_in_beat = current_frame % len_beat
+    if position_in_beat+frames >= len_beat:
+        return True
+    return False
+
+
+def is_in_first_half_of_beat(current_frame: int, len_beat: int) -> bool:
+    """Determine whether current_frame is in the first half of beat. 
+    In case it is exactly in half, return True.
+
+    Args:
+        current_frame (int): Current frame (effectively moment in time).
+        len_beat (int): The length of one beat in frames.
+
+    Returns:
+        bool: True if current_frame is in the first half of beat.
+    """
+    half_beat = int(len_beat/2)
+    position_in_beat = current_frame % len_beat
+    if half_beat <= position_in_beat:
+        return True
+    return False
