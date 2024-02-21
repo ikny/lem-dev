@@ -44,6 +44,18 @@ class RecordedTrack(Track):
         """
         self.data = np.concatenate([self.data, data])
 
+    def is_complete(self) -> bool:
+        """Checks whether all the properties have been set and length of the data is not zero as when initialized.
+
+        Returns:
+            bool: True if all the properties have been set and length of the data is not zero. False otherwise.
+        """
+        return \
+            self.first_frame_time is not None \
+            and self.start_rec_time is not None \
+            and self.stop_rec_time is not None \
+            and self.data.size != 0
+
 
 class PlayingTrack(Track):
     """A track which is beaing played. Has audio data, knows when it started playing 

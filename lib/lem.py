@@ -11,7 +11,7 @@ from time import sleep
 # parts of project
 from constants import *
 from tracks import RecordedTrack, PlayingTrack
-from custom_exceptions import InvalidSamplerateError
+from custom_exceptions import IncompleteRecordedTrackError, InvalidSamplerateError
 from utils import Queue, AudioCircularBuffer, UserRecordingEvents, on_beat, is_in_first_half_of_beat
 
 
@@ -180,7 +180,6 @@ class LoopStreamManager():
         self._event_queue.push(UserRecordingEvents.STOP)
         logger.debug("STOP event pushed to queue!")
 
-        # TODO: async wait is probably supposed to be used here
         while True:
             if not self._recorded_tracks_queue.empty():
                 break
@@ -199,14 +198,16 @@ class LoopStreamManager():
             bool: True if the track was long at least one beat, thus it was actually added into tracks. 
             False if the rounding resulted in an empty track.
         """
-        # TODO: solve this typing mess
+        if not recorded_track.is_complete():
+            raise IncompleteRecordedTrackError(
+                "RecordedTrack must be complete to be modified in post_production! See RecordedTrack.is_complete().")
+
         first: int = recorded_track.first_frame_time  # type: ignore
         start: int = recorded_track.start_rec_time  # type: ignore
         stop: int = recorded_track.stop_rec_time  # type: ignore
         data = recorded_track.data[:len(
             recorded_track.data)-len(recorded_track.data) % self._len_beat]
         length = len(data)
-
         half_beat = int(self._len_beat/2)
 
         if start - first < half_beat:
