@@ -1,9 +1,15 @@
-# types
+# types/dev
 from typing import Any, Callable
+import logging
 # libs
 import tkinter as tk
 # parts of project
 from main import LemApp
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format="%(levelname)s: %(asctime)s %(name)s: %(message)s", level=logging.DEBUG)
 
 
 class ErrorPopup(tk.Toplevel):
@@ -141,6 +147,7 @@ class RecordButton(tk.Button):
         """A method to be called when the button is pushed. 
         Based on the current state decides what callback should be called and changes its state.
         """
+        logger.debug("RecordButton clicked!")
         if self._state == "waiting":
             self.on_start_recording()
             self._state = "recording"

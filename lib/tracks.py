@@ -1,9 +1,9 @@
-# types
+# types/dev
 from typing import Optional
 import numpy.typing as npt
+import logging
 # libs
 import numpy as np
-import logging
 # other parts of this project
 from constants import *
 
