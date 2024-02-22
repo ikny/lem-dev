@@ -49,7 +49,7 @@ class LemApp(tk.Tk):
         self.tracklist.pack(fill="both", expand=1)
 
         # TODO: set_bpm call is just a debug option
-        self.set_bpm(30)
+        self.set_bpm(73)
 
         # start running
         self.mainloop()

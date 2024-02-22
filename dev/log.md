@@ -1017,4 +1017,7 @@ Today I am implementing logging, and I am realizing some interesting stuff!
 when the program waits for the second half of beat, it rounds correctly, but when it stops in the first half, it round one beat down.
 2) I am going to have to deal with redirecting `stderr` because of the alsa err... which should be alright, just tell the user, try to save the data and restart the stream.
 3) Gonna try to figure out why does tkinter ommits a func call when spamming the RecordButton. 
-    - -> this is probably due to the keypress being so fast tkinter mainloop does not register it. It can be implemented into the redirected stderr. 
+    - -> this is probably due to the keypress being so fast tkinter mainloop does not register it. It can be implemented into the redirected stderr.
+
+## 22.2.
+Fixed a bug in `is in the first half of a beat omfg I have to shorten this`, but apparently the post-prod does not work either. Lets fix that!

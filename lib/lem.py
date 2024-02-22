@@ -216,11 +216,12 @@ class LoopStreamManager():
             raise IncompleteRecordedTrackError(
                 "RecordedTrack must be complete to be modified in post_production! See RecordedTrack.is_complete().")
 
+        logger.debug(
+            f"The frames over are: {len(recorded_track.data)%self._len_beat}. This should be zero!")
         first: int = recorded_track.first_frame_time  # type: ignore
         start: int = recorded_track.start_rec_time  # type: ignore
         stop: int = recorded_track.stop_rec_time  # type: ignore
-        data = recorded_track.data[:len(
-            recorded_track.data)-len(recorded_track.data) % self._len_beat]
+        data = recorded_track.data
         length = len(data)
         half_beat = int(self._len_beat/2)
 
@@ -231,17 +232,15 @@ class LoopStreamManager():
             first += self._len_beat
 
         if (stop - first) % self._len_beat < half_beat:
-            if stop > length:
-                stop = length
-            else:
-                stop = length - self._len_beat
+            stop = length - self._len_beat
         else:
             stop = length
 
         data = data[start:stop]
 
         if len(data):
-            logger.debug(f"The track was rounded successfully. It is long {len(data)/self._len_beat} beats.")
+            logger.debug(
+                f"The track was rounded successfully. It is long {len(data)/self._len_beat} beats.")
             return PlayingTrack(
                 data=data, playing_from_frame=first)
         logger.debug("The resulting track had length zero.")
@@ -301,9 +300,6 @@ class LoopStreamManager():
                 self._recorded_track.data = self._recorded_track.data[:len(
                     self._recorded_track.data)-len(self._recorded_track.data) % self._len_beat]
                 self._finish_recording()
-            
-            if on_beat(current_frame=self._current_frame, len_beat=self._len_beat, frames=frames):
-                logger.debug("This is on beat!")
 
             # this happens every callback
             self._last_beat.write(data=indata)
