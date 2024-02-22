@@ -241,7 +241,7 @@ class LoopStreamManager():
         data = data[start:stop]
 
         if len(data):
-            logger.debug("The track was rounded successfully.")
+            logger.debug(f"The track was rounded successfully. It is long {len(data)/self._len_beat} beats.")
             return PlayingTrack(
                 data=data, playing_from_frame=first)
         logger.debug("The resulting track had length zero.")
@@ -297,7 +297,13 @@ class LoopStreamManager():
             if self._recording:
                 self._recorded_track.append(data=indata)
             if self._stopping_recording and on_beat(current_frame=self._current_frame, len_beat=self._len_beat, frames=frames):
+                # cut off the few frames over a beat
+                self._recorded_track.data = self._recorded_track.data[:len(
+                    self._recorded_track.data)-len(self._recorded_track.data) % self._len_beat]
                 self._finish_recording()
+            
+            if on_beat(current_frame=self._current_frame, len_beat=self._len_beat, frames=frames):
+                logger.debug("This is on beat!")
 
             # this happens every callback
             self._last_beat.write(data=indata)
@@ -318,8 +324,7 @@ class LoopStreamManager():
         # initialize recording
         self._recorded_track.first_frame_time = self._current_frame-self._last_beat.position()
         self._recorded_track.start_rec_time = self._current_frame
-        self._recorded_track.append(
-            data=self._last_beat.start_to_index())
+        self._recorded_track.append(data=self._last_beat.start_to_index())
         self._recording = True
 
     def _stop_recording(self) -> None:
@@ -330,6 +335,9 @@ class LoopStreamManager():
         if is_in_first_half_of_beat(current_frame=self._current_frame, len_beat=self._len_beat):
             logger.debug(
                 "The user's stop came in the first half of beat, finishing immediately.")
+            # fill the track to a beat
+            self._recorded_track.append(np.zeros(shape=(
+                self._len_beat-self._current_frame % self._len_beat, CHANNELS), dtype=DTYPE))
             self._finish_recording()
         else:
             logger.debug(

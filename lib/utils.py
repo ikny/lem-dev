@@ -131,6 +131,6 @@ def is_in_first_half_of_beat(current_frame: int, len_beat: int) -> bool:
     """
     half_beat = int(len_beat/2)
     position_in_beat = current_frame % len_beat
-    if half_beat <= position_in_beat:
+    if position_in_beat <= half_beat:
         return True
     return False
