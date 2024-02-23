@@ -1021,3 +1021,9 @@ when the program waits for the second half of beat, it rounds correctly, but whe
 
 ## 22.2.
 Fixed a bug in `is in the first half of a beat omfg I have to shorten this`, but apparently the post-prod does not work either. Lets fix that!
+
+
+## 23.2.
+Made experiments on school PCs. Apparently, the bad clipping sound is caused by headphones port writing into microphone port somehow. When I go to sound settings and lower the volume of either in or out signal, this stops. However, I was not able to test the behaviour of a real microphone/keys plugged in and I think that school PCs do not have internal microphone... I was only able to record noise from me tapping the mic cable on "vnitřní zvukový systém analogové stereo" the sound was delayed significantly (one or two seconds or so), and on "monitor of..." there was no signal.
+
+At home, the solution is to wait exactly one minute before plugging the keys in. Idk why.
