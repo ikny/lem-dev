@@ -1020,6 +1020,19 @@ when the program waits for the second half of beat, it rounds correctly, but whe
     - -> this is probably due to the keypress being so fast tkinter mainloop does not register it. It can be implemented into the redirected stderr.
 
 ## 22.2.
+Fixed a bug in `is in the first half of a beat omfg I have to shorten this`, but apparently the post-prod does not work either. Lets fix that! Ok, perhaps there was not any... funny. Anyways, Lets get into the redirecting of `stderr`.
+
+### stderr redirect
+Why do I do this?
+1) My program will then be able to catch the ALSA underrun error and restart the stream.
+2) I could also catch the error I raise in post-prod, as it only happens when the user clicks too fast... and notify the user to stop killing their keyboard/mouse, lol.
+
+The ALSA err is apparently printed to stdout, so I will have to redirect that one either. Hopefully it wont break, as it could create an endless loop.
+It was alright, but it did not work either. I do not know how the warning is printed... However, I can at least describe what is happening:
+
+When the ALSA error is printed, the stream thread stops/breaks. No more callbacks are invoked. On the other hand, the tkinter (main) thread still runs. It stops only after I click the record button once more, pushing the STOP event into the event queue. The thread is then stuck on my while-sleep loop, which is now effectively endless. From this state it cannot recover in a different manner than keyboard interrupt. However, if I close the window instead of pressing again the rec button, the app closes normally.
+
+Funny. Suddenly, I get the alsa error every time I try to run my code. It could be that ALSA is broken or idk...
 Fixed a bug in `is in the first half of a beat omfg I have to shorten this`, but apparently the post-prod does not work either. Lets fix that!
 
 
