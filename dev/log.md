@@ -1027,3 +1027,20 @@ Fixed a bug in `is in the first half of a beat omfg I have to shorten this`, but
 Made experiments on school PCs. Apparently, the bad clipping sound is caused by headphones port writing into microphone port somehow. When I go to sound settings and lower the volume of either in or out signal, this stops. However, I was not able to test the behaviour of a real microphone/keys plugged in and I think that school PCs do not have internal microphone... I was only able to record noise from me tapping the mic cable on "vnitřní zvukový systém analogové stereo" the sound was delayed significantly (one or two seconds or so), and on "monitor of..." there was no signal.
 
 At home, the solution is to wait exactly one minute before plugging the keys in. Idk why.
+
+
+## 26.2
+najít jednu konfiguraci, ve které to funguje, tu popsat pro uživatele kvůli testování (tedy notebook s vnitrnim mikrofonem, jako mi to doma vzdy funguje).
+
+investigace underrunu - ale ne na moc dlouho
+
+
+main na top-level uroven
+
+
+## 27.2.
+Stabliní konfigurace: 
+1) Používání sluchátek a vnitřního mikrofonu na laptopu s Ubuntu
+2) Používání sluchátek a externího mikrofonu na PC s linux Mint
+
+Případné nastavování vstupních/výstupních zařízení nacháváme na systémovém nastavení. 
