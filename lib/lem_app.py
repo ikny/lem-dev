@@ -4,11 +4,13 @@ import logging
 # libs
 import tkinter as tk
 from soundfile import LibsndfileError
+import sys
 # parts of project
-from gui_classes import *
-from lem import Lem
-from constants import METRONOME_SAMPLE_PATH, SAMPLERATE
-from custom_exceptions import InvalidSamplerateError
+from .abstract_lem_app import AbstractLemApp
+from .gui_classes import AppBar, ErrorPopup, RecordButton, TrackList
+from .lem import Lem
+from .constants import METRONOME_SAMPLE_PATH, SAMPLERATE
+from .custom_exceptions import InvalidSamplerateError
 
 
 logger = logging.getLogger(__name__)
@@ -16,7 +18,7 @@ logging.basicConfig(
     format="%(levelname)s: %(asctime)s %(name)s: %(message)s", level=logging.DEBUG)
 
 
-class LemApp(tk.Tk):
+class LemApp(tk.Tk, AbstractLemApp):
     """The main class of this app. Provides a GUI and creates its own state.
     """
 
@@ -47,9 +49,6 @@ class LemApp(tk.Tk):
         self.record_button.pack(fill="x", expand=0)
         self.tracklist = TrackList(master=self)
         self.tracklist.pack(fill="both", expand=1)
-
-        # TODO: set_bpm call is just a debug option
-        self.set_bpm(73)
 
         # start running
         self.mainloop()
@@ -105,7 +104,7 @@ class LemApp(tk.Tk):
 
     def on_stop_recording(self) -> None:
         """A method to be passed as a callback to the RecordButton.
-        Adds track in the GUI only if the track was added in the logic (see Lem.post_production for more details).
+        Adds track in the GUI only if the track was added in the logic (see LoopStreamManager.post_production for more details).
         """
         logger.debug("Recording button pushed, stopping recording!")
         if self.lem_state.stop_recording():  # type: ignore
