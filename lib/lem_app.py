@@ -6,11 +6,11 @@ import tkinter as tk
 from soundfile import LibsndfileError
 import sys
 # parts of project
-from .abstract_lem_app import AbstractLemApp
-from .gui_classes import AppBar, ErrorPopup, RecordButton, TrackList
-from .lem import Lem
-from .constants import METRONOME_SAMPLE_PATH, SAMPLERATE
-from .custom_exceptions import InvalidSamplerateError
+from .abstract_lem_app import AbstractLemApp  # type: ignore
+from .gui_classes import AppBar, ErrorPopup, RecordButton, TrackList  # type: ignore
+from .lem import Lem  # type: ignore
+from .constants import METRONOME_SAMPLE_PATH, SAMPLERATE  # type: ignore
+from .custom_exceptions import InvalidSamplerateError  # type: ignore
 
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,9 @@ class LemApp(tk.Tk, AbstractLemApp):
         self.record_button.pack(fill="x", expand=0)
         self.tracklist = TrackList(master=self)
         self.tracklist.pack(fill="both", expand=1)
+
+        # TODO
+        # self.set_bpm(60)
 
         # start running
         self.mainloop()

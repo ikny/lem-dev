@@ -1057,3 +1057,45 @@ Stabliní konfigurace:
 2) Používání sluchátek a externího mikrofonu na PC s linux Mint
 
 Případné nastavování vstupních/výstupních zařízení nacháváme na systémovém nastavení. 
+
+
+## 29.2.
+Debugging the fixed recording:
+- when the stop comes in the first half of a beat, frames over == 0
+- when the stop comes in the second half of a beat, frames over == 100*n; n == the number of already finished recordings
+- in both cases the length of the beats is higher than it should be, and grows
+- in both cases, a strange noise appears - it seems to be a 441 Hz saw wave. This means it has to do something with the callback, probably with the concatenating afterwards.
+
+## 1.3.
+- when the stop comes in the first half of a beat, frames over == 0
+- ~~when the stop comes in the second half of a beat, frames over == 100*n; n == the number of already finished recordings~~
+- ~~in both cases the length of the beats is higher than it should be, and grows~~
+- in both cases, a strange noise appears - it seems to be a 441 Hz saw wave. This means it has to do something with the callback, probably with the concatenating afterwards.
+
+The shapes seem to be alright.
+
+Okay, this is a mystery: 
+When the recorded track is initialized like this, it produces the strange lengths of bpm.
+```py
+def __init__(self, data: list[npt.NDArray[DTYPE]] = []) -> None:
+    """Initialize an instance of recorded track.
+    """
+    self.data = data
+```
+
+But when it is initialized like this:
+```py
+def __init__(self) -> None:
+    """Initialize an instance of recorded track.
+    """
+    self.data: list[npt.NDArray[DTYPE]] = []
+```
+The bpm acts normal.
+
+### !!!
+Experiment revealed that in the first case the RecordedTrack is initialized with some data, which it should not be. Turns out, this is a feature of python!
+
+---
+https://stackoverflow.com/questions/1132941/least-astonishment-and-the-mutable-default-argument
+
+---

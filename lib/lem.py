@@ -9,10 +9,10 @@ import soundfile as sf
 import threading
 from time import sleep
 # parts of project
-from .constants import *
-from .tracks import RecordedTrack, PlayingTrack
-from .custom_exceptions import IncompleteRecordedTrackError, InvalidSamplerateError
-from .utils import Queue, AudioCircularBuffer, UserRecordingEvents, on_beat, is_in_first_half_of_beat
+from .constants import *  # type: ignore
+from .tracks import RecordedTrack, PlayingTrack  # type: ignore
+from .custom_exceptions import IncompleteRecordedTrackError, InvalidSamplerateError  # type: ignore
+from .utils import Queue, AudioCircularBuffer, UserRecordingEvents, on_beat, is_in_first_half_of_beat  # type: ignore
 
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ class Lem():
 
         if len(sample) <= self._len_beat:
             sample = np.concatenate(
-                (sample, np.zeros(shape=(self._len_beat-len(sample), CHANNELS), dtype=DTYPE))) # type: ignore
+                (sample, np.zeros(shape=(self._len_beat-len(sample), CHANNELS), dtype=DTYPE)))  # type: ignore
         else:
             sample = sample[:self._len_beat]
 
@@ -152,11 +152,14 @@ class LoopStreamManager():
         self._recorded_track = RecordedTrack()
         self._recorded_tracks_queue = Queue()
 
+        logger.debug("Stream manager initialized.")
+
     def start_stream(self) -> None:
         """Make a new thread, in which the stream will be active
         """
         self._stream_thread = threading.Thread(target=self.main)
         self._stream_thread.start()
+        logger.debug("Audio thread started.")
 
     def end_stream(self) -> None:
         """Set stream_active to false and wait for the stream thread to end. 
@@ -232,14 +235,14 @@ class LoopStreamManager():
                          data is {recorded_track.data}.""")
             raise IncompleteRecordedTrackError(
                 "RecordedTrack must be complete to be modified in post_production! See RecordedTrack.is_complete().")
-        logger.debug(
-            f"The frames over are: {len(recorded_track.data)%self._len_beat}. This should be zero!")
 
         first: int = recorded_track.first_frame_time  # type: ignore
         start: int = recorded_track.start_rec_time  # type: ignore
         stop: int = recorded_track.stop_rec_time  # type: ignore
-        data = recorded_track.data
+        data = recorded_track.to_array()
         length = len(data)
+        logger.debug(
+            f"The frames over are: {length%self._len_beat}. This should be zero!")
         half_beat = int(self._len_beat/2)
         # round the start
         if start - first < half_beat:
@@ -338,13 +341,15 @@ class LoopStreamManager():
                     logger.debug("User stopped the recording.")
                     self._stop_recording()
 
-            if self._recording:
-                self._recorded_track.append(data=indata)
             if self._stopping_recording and on_beat(current_frame=self._current_frame, len_beat=self._len_beat, frames=frames):
                 # cut off the few frames over a beat
-                self._recorded_track.data = self._recorded_track.data[:len(
-                    self._recorded_track.data)-len(self._recorded_track.data) % self._len_beat]
+                pos_in_beat = self._current_frame % self._len_beat
+                frames_left = self._len_beat - pos_in_beat
+                data_to_join = indata[:frames_left]
+                self._recorded_track.join(data=data_to_join)
                 self._finish_recording()
+            elif self._recording:
+                self._recorded_track.join(data=indata)
 
             # this happens every callback
             self._last_beat.write(data=indata)
@@ -369,7 +374,7 @@ class LoopStreamManager():
         # initialize recording
         self._recorded_track.first_frame_time = self._current_frame-self._last_beat.position()
         self._recorded_track.start_rec_time = self._current_frame
-        self._recorded_track.append(data=self._last_beat.start_to_index())
+        self._recorded_track.join(data=self._last_beat.start_to_index())
         self._recording = True
 
     def _stop_recording(self) -> None:
@@ -385,7 +390,7 @@ class LoopStreamManager():
             logger.debug(
                 "The user's stop came in the first half of beat, finishing immediately.")
             # fill the track to a beat
-            self._recorded_track.append(np.zeros(shape=(
+            self._recorded_track.join(np.zeros(shape=(
                 self._len_beat-self._current_frame % self._len_beat, CHANNELS), dtype=DTYPE))
             self._finish_recording()
         else:

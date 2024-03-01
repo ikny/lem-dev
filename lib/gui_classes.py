@@ -4,7 +4,7 @@ import logging
 # libs
 import tkinter as tk
 # parts of project
-from .abstract_lem_app import AbstractLemApp
+from .abstract_lem_app import AbstractLemApp # type: ignore
 
 
 logger = logging.getLogger(__name__)
