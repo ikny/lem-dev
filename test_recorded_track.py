@@ -1,3 +1,4 @@
+from random import randint
 import numpy as np
 from lib.constants import DTYPE
 from lib.tracks import RecordedTrack
@@ -36,7 +37,20 @@ def test_init():
     b = RecordedTrack()
     assert b.data == []
 
+def test_append_vs_concat():
+    l = []
+    a = np.array([[randint(-32768, 32767), randint(-32768, 32767)] for i in range(100)], dtype=DTYPE)
+    b = np.array([[randint(-32768, 32767), randint(-32768, 32767)] for i in range(100)], dtype=DTYPE)
+    c = np.array([[randint(-32768, 32767), randint(-32768, 32767)] for i in range(100)], dtype=DTYPE)
+
+    l.append(a)
+    l.append(b)
+    l.append(c)
+
+    lc = np.concatenate(l)
+    cc = np.concatenate([a, b, c])
+    assert lc.all() == cc.all()
+
 
 if __name__ == "__main__":
-    test_append()
-    test_init()
+    test_append_vs_concat()

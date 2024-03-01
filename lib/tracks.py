@@ -9,8 +9,8 @@ from .constants import *  # type: ignore
 
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler(filename="tracks.txt", mode="w"))
-logger.debug("message!")
+logging.basicConfig(
+    format="%(levelname)s: %(asctime)s %(name)s: %(message)s", level=logging.DEBUG)
 
 
 class RecordedTrack():

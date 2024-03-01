@@ -258,6 +258,8 @@ class LoopStreamManager():
         # cut the audio
         data = data[start:stop]
 
+        np.save("export", data)
+
         if len(data):
             logger.debug(
                 f"The track was rounded successfully. It is long {len(data)/self._len_beat} beats.")
@@ -327,6 +329,8 @@ class LoopStreamManager():
                 status (sd.CallbackFlags): CallbackFlags object, indicating whether input/output under/overflow is happening.
             """
             # handle errs
+            if status:
+                logger.error(status)
             if status.output_underflow:
                 outdata.fill(0)
                 return

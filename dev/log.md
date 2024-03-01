@@ -1099,3 +1099,7 @@ Experiment revealed that in the first case the RecordedTrack is initialized with
 https://stackoverflow.com/questions/1132941/least-astonishment-and-the-mutable-default-argument
 
 ---
+
+As for the buzzing, the problem is not in the playback. When plotting the data in the post-prod, they are already buzzy. Moreover, I have played the saved data from post-prod, they do buzz.
+
+To be precise, the data form a chaotic 441 Hz wave. This wave is periodical (isn't that from a definition of wave? nevermind...), and the shape of the period varies over different sound captures.
